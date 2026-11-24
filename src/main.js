@@ -1,7 +1,6 @@
 import { Chess } from 'chess.js';
 import './style.css';
 
-const START_FEN = 'start';
 const PIECES = {
   wk: '♔', wq: '♕', wr: '♖', wb: '♗', wn: '♘', wp: '♙',
   bk: '♚', bq: '♛', br: '♜', bb: '♝', bn: '♞', bp: '♟',
@@ -20,7 +19,8 @@ const stored = JSON.parse(localStorage.getItem(storageKey) || '{"matches":[]}');
 const state = {
   chess: new Chess(), orientation: 'w', userColor: 'w', selected: null,
   worker: null, engineReady: false, thinking: false, gameActive: false,
-  replacingBotMove: false, pendingStart: false, currentMatch: null, matches: stored.matches || [],
+  replacingBotMove: false, pendingStart: false, pendingResume: false, ignoreBestMove: false,
+  currentMatch: null, matches: stored.matches || [],
   manualPlyIndexes: new Set(), searchDepth: 12, settingsTab: 'engine', toastTimer: null,
 };
 
@@ -198,10 +198,19 @@ function loadEngine() {
       if (state.pendingStart) {
         state.pendingStart = false;
         newMatch();
+      } else if (state.pendingResume) {
+        state.pendingResume = false;
+        if (state.chess.turn() !== state.userColor) requestBotMove();
       }
     } else if (line === 'readyok') {
       drawStatus();
     } else if (line.startsWith('bestmove')) {
+      if (state.ignoreBestMove) {
+        state.ignoreBestMove = false;
+        state.thinking = false;
+        drawStatus();
+        return;
+      }
       state.thinking = false;
       const uci = line.split(/\s+/)[1];
       if (state.gameActive && uci && uci !== '(none)') {
@@ -235,10 +244,17 @@ function requestBotMove() {
   drawStatus();
 }
 
+function cancelSearch() {
+  if (state.worker && state.thinking) {
+    state.ignoreBestMove = true;
+    state.worker.postMessage('stop');
+  }
+  state.thinking = false;
+}
+
 function undoMyMove() {
   if (!state.gameActive) return;
-  state.worker?.postMessage('stop');
-  state.thinking = false;
+  cancelSearch();
   let undoneUser = false;
   while (state.chess.history().length) {
     const move = state.chess.undo();
@@ -254,8 +270,7 @@ function undoMyMove() {
 
 function undoBotMove() {
   if (!state.gameActive) return;
-  state.worker?.postMessage('stop');
-  state.thinking = false;
+  cancelSearch();
   let undoneBot = false;
   while (state.chess.history().length) {
     const move = state.chess.undo();
@@ -287,9 +302,12 @@ function loadMatch(id) {
   state.manualPlyIndexes = new Set(match.moves.map((item, index) => item.label ? index : -1).filter((index) => index >= 0));
   state.gameActive = true;
   state.replacingBotMove = false;
+  state.pendingResume = !state.engineReady;
   els.side.value = match.userColor;
   els.strength.value = String(match.strength || 12);
   draw();
+  if (!state.engineReady) loadEngine();
+  else if (state.chess.turn() !== state.userColor) requestBotMove();
   showToast('Match loaded.');
 }
 
@@ -336,7 +354,7 @@ function bindEvents() {
     if (!state.engineReady) { showToast('Load Stockfish first from Settings.'); return; }
     newMatch();
   });
-  $('#stop-button').addEventListener('click', () => { state.worker?.postMessage('stop'); state.thinking = false; drawStatus(); });
+  $('#stop-button').addEventListener('click', () => { if (state.thinking) state.worker?.postMessage('stop'); });
   $('#flip-button').addEventListener('click', () => { state.orientation = state.orientation === 'w' ? 'b' : 'w'; drawBoard(); });
   els.undoYou.addEventListener('click', undoMyMove);
   els.undoBot.addEventListener('click', undoBotMove);
