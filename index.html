@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#101815" />
+    <title>Stockfish Helper — Local Chess</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="Stockfish Helper home"><span class="brand-mark">♞</span><span>Stockfish <b>Helper</b></span></a>
+        <div class="top-status"><span class="local-dot"></span>Runs on this device</div>
+        <button id="settings-open" class="icon-button" title="Settings" aria-label="Open settings">⚙</button>
+      </header>
+
+      <main class="layout">
+        <section class="play-area">
+          <div class="board-column">
+            <div class="player-line"><span class="avatar engine-avatar">♟</span><div><strong>Local engine</strong><small id="engine-caption">Stockfish · waiting</small></div><span class="rating-tag">BOT</span></div>
+            <div class="board-wrap">
+              <div id="board" class="board" role="grid" aria-label="Chess board"></div>
+              <button id="resize-handle" class="resize-handle" aria-label="Resize board" title="Drag to resize">⌟</button>
+            </div>
+            <div class="player-line you-line"><span class="avatar you-avatar">♟</span><div><strong>You</strong><small id="you-caption">White · your turn</small></div><span id="turn-chip" class="turn-chip">YOUR TURN</span></div>
+            <div class="board-tools"><button id="flip-button" class="subtle-button">⇅ <span>Flip board</span></button><span class="tool-spacer"></span><span class="board-hint" id="board-hint">Choose a piece, then a square</span></div>
+          </div>
+
+          <aside class="game-panel">
+            <div class="panel-heading"><div><span class="eyebrow">LOCAL MATCH</span><h1>Play chess</h1></div><button id="new-game" class="new-game-button">＋ New game</button></div>
+            <div class="engine-card">
+              <div class="engine-card-title"><span class="engine-orb">♟</span><div><strong id="engine-name">Stockfish</strong><small>Engine runs privately on your device</small></div><span class="engine-state" id="engine-state">OFF</span></div>
+              <div class="engine-fields">
+                <label>Play as<select id="side-select"><option value="w">White</option><option value="b">Black</option></select></label>
+                <label>Strength<select id="strength-select"><option value="4">Beginner</option><option value="8">Casual</option><option value="12" selected>Club</option><option value="16">Strong</option><option value="20">Maximum</option></select></label>
+              </div>
+              <div class="engine-actions"><button id="start-button" class="primary-button">Start game</button><button id="stop-button" class="stop-button" disabled>Stop</button></div>
+              <p id="engine-note" class="engine-note">First setup: download the local Stockfish engine from the Settings tab.</p>
+            </div>
+
+            <div class="move-section">
+              <div class="section-title"><h2>Moves</h2><span id="move-count" class="count-pill">0</span></div>
+              <div id="move-list" class="move-list"><div class="empty-moves"><span>♘</span><p>Your moves will appear here.</p></div></div>
+              <div class="move-actions"><button id="undo-you" class="action-button" disabled>↶ Undo my move</button><button id="undo-bot" class="action-button" disabled>↶ Undo bot move</button></div>
+            </div>
+            <div class="match-section"><div class="section-title"><h2>Match history</h2><span id="history-count" class="count-pill">0</span></div><div id="history-list" class="history-list"><p class="history-empty">Completed and saved matches show up here.</p></div></div>
+          </aside>
+        </section>
+      </main>
+
+      <div id="settings-overlay" class="overlay" hidden>
+        <section class="settings-drawer" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+          <div class="drawer-header"><div><span class="eyebrow">PREFERENCES</span><h2 id="settings-title">Game settings</h2></div><button id="settings-close" class="icon-button" aria-label="Close settings">×</button></div>
+          <div class="settings-tabs"><button class="settings-tab active" data-tab="engine">Engine</button><button class="settings-tab" data-tab="game">Game</button><button class="settings-tab" data-tab="about">About</button></div>
+          <div class="settings-content" id="settings-content"></div>
+        </section>
+      </div>
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
+
