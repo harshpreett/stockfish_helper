@@ -1,6 +1,6 @@
 # Stockfish Helper
 
-A local browser chess app for playing against configurable chess engines. The first build includes a browser-based Stockfish engine, selectable side, board flipping and resizing, saved local match history, and undo controls that let you replace the bot's last move.
+A local browser chess app for playing against Stockfish, editing continuations, and reviewing positions. Games, settings, and history stay in your browser.
 
 ## Start it
 
@@ -16,18 +16,21 @@ Open the local address printed by Vite. The Stockfish engine runs in a browser W
 
 ## Local board theme
 
-The app can load the Green board and Neo piece art from `assets/9rdwe.png` and `assets/ejgfv/*.png`. These files are local-only and ignored by Git. Put the 12 piece sprites (`wp.png`, `wn.png`, `wb.png`, `wr.png`, `wq.png`, `wk.png`, and their `b*` equivalents) in `assets/ejgfv/`. The production build copies the images it finds into `dist/assets/`; if they are missing, the app falls back to its built-in board colors and Unicode pieces.
+The app includes the Green board (`assets/9rdwe.png`) and Neo piece sprites (`assets/ejgfv/*.png`). The production build copies these images to `dist/assets/`; if an image is missing, the app falls back to built-in colors and Unicode pieces.
 
 ## First build scope
 
 - Stockfish 19 Lite, single-threaded WebAssembly engine
 - White or Black player side; one-click orientation flip
-- Strength selector and browser-local match history
+- Strength and search-depth selectors; analysis with evaluation and three candidate lines
+- Timed games, position review with inaccuracy/mistake/blunder labels, and move replay
+- PGN import/export and custom FEN positions
+- Searchable, favoritable browser-local match history and active game recovery
 - Undo your move and undo the bot move to choose a manual replacement
 - Resizable board
 - All match records saved in browser local storage
 
-Leela Chess Zero, Maia, engine import controls, timers, analysis, and PGN export are planned additions. Match records stay in the current browser profile and are not synced across devices.
+Only Stockfish is connected in this build. Match records stay in the current browser profile and are not synced across devices. Opening names and natural-language tactical explanations are not included yet.
 
 ## Engine licensing
 

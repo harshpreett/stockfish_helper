@@ -1,6 +1,10 @@
 node_modules/
 dist/
-assets/
+assets/*
+!assets/9rdwe.png
+!assets/ejgfv/
+assets/ejgfv/*
+!assets/ejgfv/*.png
 public/engine/stockfish-*.js
 public/engine/stockfish-*.wasm
 public/engine/Copying.txt
