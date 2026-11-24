@@ -1,5 +1,6 @@
 node_modules/
 dist/
+assets/
 public/engine/stockfish-*.js
 public/engine/stockfish-*.wasm
 public/engine/Copying.txt

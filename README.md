@@ -14,6 +14,10 @@ npm run dev
 
 Open the local address printed by Vite. The Stockfish engine runs in a browser Web Worker. No paid API or cloud account is needed. The initial engine download requires internet access; after download, the engine files are served by the local app.
 
+## Local board theme
+
+The app can load the Green board and Neo piece art from `assets/9rdwe.png` and `assets/ejgfv/*.png`. These files are local-only and ignored by Git. Put the 12 piece sprites (`wp.png`, `wn.png`, `wb.png`, `wr.png`, `wq.png`, `wk.png`, and their `b*` equivalents) in `assets/ejgfv/`. The production build copies the images it finds into `dist/assets/`; if they are missing, the app falls back to its built-in board colors and Unicode pieces.
+
 ## First build scope
 
 - Stockfish 19 Lite, single-threaded WebAssembly engine

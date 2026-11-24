@@ -5,6 +5,10 @@ const PIECES = {
   wk: '♔', wq: '♕', wr: '♖', wb: '♗', wn: '♘', wp: '♙',
   bk: '♚', bq: '♛', br: '♜', bb: '♝', bn: '♞', bp: '♟',
 };
+const PIECE_FILES = {
+  wk: 'wk', wq: 'wq', wr: 'wr', wb: 'wb', wn: 'wn', wp: 'wp',
+  bk: 'bk', bq: 'bq', br: 'br', bb: 'bb', bn: 'bn', bp: 'bp',
+};
 const $ = (selector) => document.querySelector(selector);
 const els = {
   board: $('#board'), moveList: $('#move-list'), moveCount: $('#move-count'),
@@ -18,7 +22,7 @@ const storageKey = 'stockfish-helper-v1';
 const stored = JSON.parse(localStorage.getItem(storageKey) || '{"matches":[]}');
 const state = {
   chess: new Chess(), orientation: 'w', userColor: 'w', selected: null,
-  worker: null, engineReady: false, thinking: false, gameActive: false,
+  worker: null, engineReady: false, thinking: false, gameActive: false, boardThemeAvailable: false,
   replacingBotMove: false, pendingStart: false, pendingResume: false, ignoreBestMove: false,
   currentMatch: null, matches: stored.matches || [],
   manualPlyIndexes: new Set(), searchDepth: 12, settingsTab: 'engine', toastTimer: null,
@@ -71,6 +75,7 @@ function drawBoard() {
   const last = currentHistory().at(-1);
   const legalTargets = state.selected ? state.chess.moves({ square: state.selected, verbose: true }).map((m) => m.to) : [];
   els.board.replaceChildren();
+  els.board.classList.toggle('themed-board', state.boardThemeAvailable);
   ranks.forEach((rank, ri) => files.forEach((file, fi) => {
     const square = `${file}${rank}`;
     const piece = state.chess.get(square);
@@ -83,10 +88,18 @@ function drawBoard() {
     if (fi === 0) cell.dataset.rank = rank;
     if (ri === 7) cell.dataset.file = file;
     if (piece) {
-      const span = document.createElement('span');
-      span.className = `piece ${piece.color === 'w' ? 'white-piece' : 'black-piece'}`;
-      span.textContent = PIECES[piece.color + piece.type];
-      cell.append(span);
+      const key = piece.color + piece.type;
+      const image = document.createElement('img');
+      image.className = 'piece-image';
+      image.alt = '';
+      image.src = `/assets/ejgfv/${PIECE_FILES[key]}.png`;
+      image.onerror = () => {
+        const fallback = document.createElement('span');
+        fallback.className = `piece ${piece.color === 'w' ? 'white-piece' : 'black-piece'}`;
+        fallback.textContent = PIECES[key];
+        image.replaceWith(fallback);
+      };
+      cell.append(image);
     }
     cell.addEventListener('click', () => onSquareClick(square));
     els.board.append(cell);
@@ -323,7 +336,7 @@ function renderSettings(tab = state.settingsTab) {
   document.querySelectorAll('.settings-tab').forEach((button) => button.classList.toggle('active', button.dataset.tab === tab));
   const content = $('#settings-content');
   if (tab === 'engine') content.innerHTML = `<div class="setting-block"><span class="setting-icon">♟</span><div class="setting-copy"><strong>Stockfish 19 · Lite</strong><p>Fast local engine for browser play. Engine files are downloaded once and stay on your computer.</p><label class="setting-select-label">Search depth<select id="depth-select"><option value="8">8 · faster replies</option><option value="12">12 · balanced</option><option value="16">16 · deeper search</option><option value="20">20 · longest search</option></select></label><button id="download-engine" class="primary-button small-button">Download Stockfish files</button><p id="download-status" class="download-status"></p></div></div><div class="setting-block"><span class="setting-icon">◉</span><div class="setting-copy"><strong>Other engines</strong><p>Leela Chess Zero and Maia are planned engine choices. They are not connected in this first version.</p></div><span class="coming-soon">PLANNED</span></div><div class="privacy-note"><span>●</span><p>Moves, settings, and saved matches stay in this browser. No paid service or API key is used.</p></div>`;
-  if (tab === 'game') content.innerHTML = `<div class="setting-row"><div><strong>Board orientation</strong><p>Flip the board without changing your side in the game.</p></div><button id="settings-flip" class="subtle-button">⇅ Flip</button></div><div class="setting-row"><div><strong>Move replacement</strong><p>Undo a bot move to choose a different legal move for its side. The previous continuation is discarded.</p></div><span class="setting-check">✓</span></div><div class="setting-row"><div><strong>Match history</strong><p>Saved locally in this browser for up to 30 matches.</p></div><span class="setting-check">✓</span></div>`;
+  if (tab === 'game') content.innerHTML = `<div class="setting-row"><div><strong>Board theme</strong><p>Green board · Neo pieces, loaded from your local assets folder.</p></div><span class="setting-check">✓</span></div><div class="setting-row"><div><strong>Board orientation</strong><p>Flip the board without changing your side in the game.</p></div><button id="settings-flip" class="subtle-button">⇅ Flip</button></div><div class="setting-row"><div><strong>Move replacement</strong><p>Undo a bot move to choose a different legal move for its side. The previous continuation is discarded.</p></div><span class="setting-check">✓</span></div><div class="setting-row"><div><strong>Match history</strong><p>Saved locally in this browser.</p></div><span class="setting-check">✓</span></div>`;
   if (tab === 'about') content.innerHTML = `<div class="about-card"><span class="about-knight">♞</span><h3>Chess on your terms.</h3><p>A local chess game with configurable engines, flexible sides, and editable continuations.</p><span class="version-label">EARLY BUILD · 0.1.0</span></div><div class="license-note"><strong>Engine license</strong><p>Stockfish is distributed under GPL-3.0. The app downloads the engine from its published package and does not include the engine binary in this repository.</p></div>`;
   $('#download-engine')?.addEventListener('click', async () => {
     const status = $('#download-status');
@@ -376,5 +389,9 @@ function bindEvents() {
 }
 
 bindEvents();
+const boardImage = new Image();
+boardImage.onload = () => { state.boardThemeAvailable = true; els.board.style.backgroundImage = 'url("/assets/9rdwe.png")'; drawBoard(); };
+boardImage.onerror = () => { state.boardThemeAvailable = false; els.board.style.backgroundImage = ''; drawBoard(); };
+boardImage.src = '/assets/9rdwe.png';
 draw();
 
