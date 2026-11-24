@@ -1,0 +1,7 @@
+node_modules/
+dist/
+public/engine/stockfish-*.js
+public/engine/stockfish-*.wasm
+public/engine/Copying.txt
+.DS_Store
+
