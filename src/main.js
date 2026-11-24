@@ -364,7 +364,8 @@ function parseEngineInfo(line) {
   const whiteCp = state.engineTask.rootTurn === 'w' ? cp : -cp;
   if (state.engineTask.type === 'review') { state.analysisScore = whiteCp; return; }
   state.analysisLines[multipv - 1] = { san: sans.join(' '), score: whiteCp, depth };
-  state.analysisScore = whiteCp; renderAnalysis();
+  if (multipv === 1) state.analysisScore = whiteCp;
+  renderAnalysis();
 }
 
 function renderAnalysis() {
