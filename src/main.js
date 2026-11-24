@@ -23,7 +23,7 @@ const stored = JSON.parse(localStorage.getItem(storageKey) || '{"matches":[]}');
 const state = {
   chess: new Chess(), orientation: 'w', userColor: 'w', selected: null,
   worker: null, engineReady: false, thinking: false, gameActive: false, boardThemeAvailable: false,
-  replacingBotMove: false, pendingStart: false, pendingResume: false, ignoreBestMove: false,
+  replacingBotMove: false, pendingStart: false, pendingResume: false, ignoreBestMove: false, dragFrom: null,
   currentMatch: null, matches: stored.matches || [],
   manualPlyIndexes: new Set(), searchDepth: 12, settingsTab: 'engine', toastTimer: null,
 };
@@ -81,6 +81,7 @@ function drawBoard() {
     const piece = state.chess.get(square);
     const cell = document.createElement('button');
     cell.type = 'button';
+    cell.draggable = Boolean(piece);
     cell.className = `square ${(ri + fi) % 2 ? 'dark' : 'light'}${state.selected === square ? ' selected' : ''}${legalTargets.includes(square) ? ' legal-target' : ''}${last && (last.from === square || last.to === square) ? ' last-move' : ''}`;
     cell.setAttribute('role', 'gridcell');
     cell.setAttribute('aria-label', `${square}${piece ? ` ${piece.color === 'w' ? 'white' : 'black'} ${piece.type}` : ''}`);
@@ -102,6 +103,39 @@ function drawBoard() {
       cell.append(image);
     }
     cell.addEventListener('click', () => onSquareClick(square));
+    cell.addEventListener('dragstart', (event) => {
+      if (!canMoveForCurrentSide() || !piece || piece.color !== state.chess.turn()) {
+        event.preventDefault();
+        return;
+      }
+      state.dragFrom = square;
+      state.selected = square;
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', square);
+      cell.classList.add('selected');
+    });
+    cell.addEventListener('dragover', (event) => {
+      if (state.dragFrom) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        cell.classList.add('drag-over');
+      }
+    });
+    cell.addEventListener('dragleave', () => cell.classList.remove('drag-over'));
+    cell.addEventListener('drop', (event) => {
+      event.preventDefault();
+      cell.classList.remove('drag-over');
+      const from = event.dataTransfer.getData('text/plain') || state.dragFrom;
+      state.dragFrom = null;
+      if (from && from !== square && !playMove(from, square)) {
+        state.selected = null;
+        drawBoard();
+      }
+    });
+    cell.addEventListener('dragend', () => {
+      cell.classList.remove('drag-over');
+      state.dragFrom = null;
+    });
     els.board.append(cell);
   }));
 }
@@ -169,21 +203,19 @@ function promotionChoice() {
   return aliases[answer || 'queen'] || 'q';
 }
 
-function onSquareClick(square) {
-  if (!state.gameActive || state.thinking || state.chess.isGameOver()) return;
-  const sideToMove = state.chess.turn();
-  if (sideToMove !== state.userColor && !state.replacingBotMove) return;
-  const piece = state.chess.get(square);
-  if (!state.selected) {
-    if (piece?.color === sideToMove) { state.selected = square; drawBoard(); }
-    return;
-  }
-  if (piece?.color === sideToMove) { state.selected = square; drawBoard(); return; }
-  const options = { from: state.selected, to: square };
-  const matching = state.chess.moves({ square: state.selected, verbose: true }).filter((move) => move.to === square);
+function canMoveForCurrentSide() {
+  return state.gameActive && !state.thinking && !state.chess.isGameOver()
+    && (state.chess.turn() === state.userColor || state.replacingBotMove);
+}
+
+function playMove(from, to) {
+  if (!canMoveForCurrentSide()) return false;
+  const matching = state.chess.moves({ square: from, verbose: true }).filter((move) => move.to === to);
+  if (!matching.length) return false;
+  const options = { from, to };
   if (matching.some((move) => move.flags.includes('p'))) options.promotion = promotionChoice();
   try {
-    const move = state.chess.move(options);
+    state.chess.move(options);
     if (state.replacingBotMove) state.manualPlyIndexes.add(currentHistory().length - 1);
     state.replacingBotMove = false;
     state.selected = null;
@@ -191,9 +223,22 @@ function onSquareClick(square) {
     draw();
     if (!state.chess.isGameOver() && state.chess.turn() !== state.userColor) requestBotMove();
     else if (state.chess.isGameOver()) showToast(state.currentMatch.result);
+    return true;
   } catch {
-    state.selected = null; drawBoard();
+    return false;
   }
+}
+
+function onSquareClick(square) {
+  if (!canMoveForCurrentSide()) return;
+  const sideToMove = state.chess.turn();
+  const piece = state.chess.get(square);
+  if (!state.selected) {
+    if (piece?.color === sideToMove) { state.selected = square; drawBoard(); }
+    return;
+  }
+  if (piece?.color === sideToMove) { state.selected = square; drawBoard(); return; }
+  if (!playMove(state.selected, square)) { state.selected = null; drawBoard(); }
 }
 
 function loadEngine() {
@@ -389,6 +434,7 @@ function bindEvents() {
 }
 
 bindEvents();
+els.boardHint.textContent = 'Drag a piece, or click a piece and target square';
 const boardImage = new Image();
 boardImage.onload = () => { state.boardThemeAvailable = true; els.board.style.backgroundImage = 'url("/assets/9rdwe.png")'; drawBoard(); };
 boardImage.onerror = () => { state.boardThemeAvailable = false; els.board.style.backgroundImage = ''; drawBoard(); };
