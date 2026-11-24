@@ -1,0 +1,18 @@
+{
+  "name": "stockfish-helper",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "download:engine": "node scripts/download-engine.mjs"
+  },
+  "dependencies": {
+    "chess.js": "^1.4.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}
+
