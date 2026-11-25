@@ -2,17 +2,46 @@
   "name": "stockfish-helper",
   "version": "0.1.0",
   "private": true,
+  "productName": "Chess Helper",
   "type": "module",
+  "main": "desktop/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build && node scripts/copy-local-assets.mjs",
-    "download:engine": "node scripts/download-engine.mjs"
+    "desktop": "npm run build && electron .",
+    "package:windows": "npm run build && powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/package-maia.ps1 && electron-builder --win nsis"
   },
   "dependencies": {
     "chess.js": "^1.4.0"
   },
   "devDependencies": {
+    "electron": "45.5.0",
+    "electron-builder": "^26.0.0",
     "vite": "^6.0.0"
+  },
+  "build": {
+    "appId": "local.chess.helper",
+    "productName": "Chess Helper",
+    "asar": true,
+    "directories": { "output": "release" },
+    "files": ["dist/**/*", "desktop/**/*", "package.json"],
+    "extraResources": [
+      { "from": "models/maia3-5m.pt", "to": "models/maia3-5m.pt" },
+      { "from": "models/AGPL-3.0.txt", "to": "licenses/Maia-AGPL-3.0.txt" },
+      { "from": "vendor/maia3/LICENSE", "to": "licenses/Maia-upstream-LICENSE.txt" },
+      { "from": "public/engine/Copying.txt", "to": "licenses/Stockfish-GPL-3.0.txt" },
+      { "from": "release-runtime/maia/maia3-uci", "to": "maia" }
+    ],
+    "win": {
+      "target": ["nsis"],
+      "artifactName": "Chess-Helper-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   }
 }
 

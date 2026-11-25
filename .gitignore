@@ -5,8 +5,11 @@ assets/*
 !assets/ejgfv/
 assets/ejgfv/*
 !assets/ejgfv/*.png
-public/engine/stockfish-*.js
-public/engine/stockfish-*.wasm
-public/engine/Copying.txt
 .DS_Store
+.venv-maia-build/
+.build-tools/
+.build/
+release-runtime/
+release/
+/maia3/
 

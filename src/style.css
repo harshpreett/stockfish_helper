@@ -124,3 +124,84 @@ body{background:radial-gradient(ellipse at 18% 12%,#393834 0,transparent 40%),#2
   .move-row{padding:9px 7px;font-size:15px}
 }
 .install-steps{overflow:auto;padding:10px 12px;border-radius:7px;background:#242321;color:#e6de48;font:12px/1.7 'DM Mono',monospace}
+
+/* New home screen, in-game toolbar, and portrait layout. */
+[hidden]{display:none!important}
+.home-screen{min-height:calc(100dvh - 64px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px 56px}
+.home-intro{text-align:center;margin:0 0 24px}
+.home-intro h1{font:800 clamp(32px,5vw,48px) Manrope,sans-serif;letter-spacing:-1.8px;margin:8px 0;color:#f1f0ec}
+.home-intro p{margin:0;color:#c2c0b9;font-size:16px}
+.home-setup{width:min(100%,760px);padding:26px;background:linear-gradient(145deg,#373632,#302f2c);border:1px solid #53524b;border-radius:16px;box-shadow:0 25px 80px #0005}
+.setup-heading{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+.setup-heading .engine-orb{width:48px;height:48px;font-size:27px}
+.setup-heading h2{font:700 21px Manrope,sans-serif;margin:0}
+.setup-heading p{color:#c1bfb8;font-size:14px;margin:5px 0 0}
+.home-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.home-fields label{color:#d1cfc8;font-size:14px}
+.home-fields select{padding:13px 12px;font-size:15px;background:#282724;border-color:#5a5952}
+.home-setup .engine-note{min-height:0;margin:17px 0 0;font-size:14px;color:#c3c1ba}
+.start-home{width:100%;display:flex;justify-content:center;align-items:center;gap:10px;margin-top:20px;padding:15px;font-size:17px}
+.start-home span{font-size:21px;line-height:1}
+.offline-note{display:flex;justify-content:center;align-items:center;gap:9px;color:#c2c0b9;font-size:12px;margin:16px 0 0}
+.home-settings-link{margin-top:19px;padding:8px;border:0;background:transparent;color:#d1cfc8;font-size:13px;text-decoration:underline;text-underline-offset:4px}
+.resume-button{display:block;width:100%;margin-top:10px;padding:12px;border:1px solid #5a5952;border-radius:8px;background:#3a3935;color:#f0efeb;font-size:14px}
+.layout[hidden]{display:none!important}
+.layout{height:calc(100dvh - 64px);max-width:1700px;margin:0 auto;padding:14px 26px 18px;overflow:hidden}
+.play-area{height:100%;grid-template-columns:minmax(0,1fr) minmax(340px,440px);gap:28px;align-items:center}
+.board-column{width:100%;height:100%;gap:9px;justify-content:center}
+.board-row{display:flex;align-items:center;justify-content:center;gap:16px;width:100%;min-height:0}
+.board-wrap{width:min(var(--board-size),calc(100dvh - 250px));height:min(var(--board-size),calc(100dvh - 250px));max-width:calc(100% - 78px);max-height:calc(100dvh - 250px);flex:none}
+.board{position:relative}
+.move-arrows{position:absolute;inset:7px;width:calc(100% - 14px);height:calc(100% - 14px);overflow:visible;pointer-events:none;z-index:4}
+.hint-arrow{stroke-width:18;stroke-linecap:round;opacity:.92;filter:drop-shadow(0 2px 3px #0008)}
+.hint-arrow-1{stroke:#c9f36e}.hint-arrow-2{stroke:#f2c85d}
+.game-toolbar{display:flex;flex-direction:column;gap:7px;flex:none;padding:7px;background:#302f2c;border:1px solid #4b4a44;border-radius:11px;box-shadow:0 8px 25px #0003}
+.toolbar-button{width:52px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border:1px solid transparent;border-radius:8px;background:#3a3935;color:#eee;font-size:24px;line-height:1}
+.toolbar-button:hover{background:#45443f;border-color:#69675e}
+.toolbar-button small{font:600 10px 'DM Sans',sans-serif;color:#d2d0c9}
+.toolbar-button.hint-button{color:#d5f18e}.toolbar-button.hint-button small{color:#d5f18e}
+.you-line{margin:2px 0 0;min-height:36px}
+.you-line .avatar{height:34px;width:34px}
+.board-tools{display:flex;align-items:center;justify-content:space-between;width:min(var(--board-size),calc(100dvh - 250px));max-width:100%;min-height:18px;margin:0;color:#c2c0b9}
+.board-hint{font-size:12px}.engine-caption{color:#aaa8a1;font:11px 'DM Mono',monospace;text-align:right}
+.game-panel{width:100%;height:100%;max-height:100%;min-height:0;padding:18px;background:#302f2c;border:1px solid #4a4943}
+.panel-heading{margin-bottom:12px}.panel-heading h1{font-size:24px}
+.panel-tabs{grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:12px}
+.panel-view{overflow:auto}
+.move-list{max-height:none;min-height:180px;flex:1}
+.panel-view[data-view="play"].active{display:flex;flex-direction:column}
+.panel-view[data-view="analysis"] .analysis-card{margin-top:0}
+.move-actions.utility-actions{flex-wrap:wrap}
+.turn-chip{margin-left:auto}
+.clock{display:none!important}
+@media (max-width:1050px), (orientation:portrait){
+  body{overflow-y:auto}
+  #app{min-height:100dvh;height:auto}
+  .home-screen{min-height:calc(100dvh - 58px);padding:30px 18px}
+  .layout{height:auto;min-height:calc(100dvh - 58px);overflow:visible;padding:14px 18px 24px}
+  .play-area{display:flex;flex-direction:column;align-items:center;gap:18px;height:auto}
+  .board-column{height:auto;min-height:0;width:100%}
+  .board-row{gap:10px}
+  :root{--board-size:min(72vw,calc(100dvh - 300px),740px)}
+  .board-wrap{width:var(--board-size);height:var(--board-size);max-width:calc(100vw - 88px);max-height:calc(100dvh - 300px)}
+  .game-toolbar{gap:5px;padding:5px}
+  .toolbar-button{width:46px;height:46px;font-size:21px}
+  .toolbar-button small{font-size:9px}
+  .board-tools{width:min(var(--board-size),calc(100vw - 84px))}
+  .game-panel{width:min(100%,780px);height:auto;max-height:none;min-height:430px}
+}
+@media(max-width:600px){
+  .topbar{height:56px;padding:0 14px}
+  .top-status{font-size:11px}
+  .home-screen{padding:25px 14px}
+  .home-intro p{font-size:14px}
+  .home-setup{padding:18px}
+  .home-fields{grid-template-columns:1fr;gap:12px}
+  .layout{padding:10px 10px 20px}
+  :root{--board-size:min(calc(100vw - 82px),calc(100dvh - 320px),560px)}
+  .board-wrap{max-width:calc(100vw - 82px);max-height:calc(100dvh - 320px)}
+  .toolbar-button{width:43px;height:43px}
+  .board-tools{width:calc(100vw - 78px)}
+  .board-hint{font-size:10px}
+  .engine-caption{font-size:9px}
+}
