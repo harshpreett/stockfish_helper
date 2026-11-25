@@ -1,8 +1,76 @@
 # Stockfish Helper
 
-A local browser chess app for playing against Stockfish or Maia-3. Stockfish plays for strength; Maia models human move choices at a selected rating. The app also supports editable continuations, game review, custom positions, and saved matches. Games, settings, and history stay in your browser.
+**A private, offline chess app for playing, analysing, and learning from your games.** Choose Stockfish for engine strength or Maia-3 for human-like moves. Play either color, explore alternate continuations, and review matches locally.
 
-## Run the browser app
+[Download Chess Helper 1.0.0 for Windows](https://github.com/harshpreett/stockfish_helper/releases/tag/v1.0.0) · [View the source](https://github.com/harshpreett/stockfish_helper)
+
+> The Windows release includes its engines and model files. Gameplay does not require an internet connection, Python installation, or paid API.
+
+## What it does
+
+| Play | Analyse | Review |
+| --- | --- | --- |
+| Choose White or Black, engine, and difficulty | Stockfish evaluation and three candidate lines | Replay, import, and export PGN games |
+| Undo your move or the bot’s move, then continue | Hint arrows for two candidate moves | Review move quality and save local match history |
+| Flip and resize the board | Start from a custom FEN position | Search and favorite saved matches |
+
+Games and settings are stored locally in the app profile; they do not sync between devices. Opening names and natural-language explanations are planned for a future release.
+
+## How the app works
+
+```mermaid
+flowchart LR
+  You[You choose a move] --> Rules[chess.js validates the position]
+  Rules --> Engine{Opponent}
+  Engine -->|Strength and analysis| SF[Stockfish WASM]
+  Engine -->|Human-like move| Maia[Bundled Maia-3 model]
+  SF --> UI[Board, hints, evaluation, review]
+  Maia --> UI
+  UI --> Saved[Local match history]
+```
+
+Stockfish runs in a browser worker. In the Windows desktop build, a small local server serves the interface only on the device; the app blocks requests to other hosts. Maia runs with its included 5M checkpoint and packaged CPU runtime.
+
+## Planned: natural-language move coach
+
+The next major feature is a coach that explains what happened in a position using engine evidence. The first version should use Stockfish evaluations and chess rules to produce clear, offline explanations. A language model can be considered later for more varied wording, while engine data remains the factual source.
+
+```mermaid
+flowchart LR
+  Position[Position before move] --> Rules[Legal moves and tactical patterns]
+  Position --> Engine[Stockfish candidate lines and evaluations]
+  Move[Played move] --> Compare[Compare played move with best line]
+  Rules --> Compare
+  Engine --> Compare
+  Compare --> Coach[Coach explains idea, threat, and consequence]
+  Coach --> Charts[Evaluation graph, move-quality graph, candidate comparison]
+```
+
+### Coach goals and measures
+
+These are **targets for the coach feature**, not claims about the current 1.0.0 app. All measurement stays on-device; the app will not send games or usage metrics anywhere.
+
+| Measure | Initial target | What it improves |
+| --- | ---: | --- |
+| Explanation coverage | An explanation or clear “no major change” note for every reviewed ply | Makes review useful throughout the game |
+| Evidence traceability | Every tactical or evaluation claim linked to a move, line, or board feature | Reduces vague or unsupported coaching |
+| Explanation latency | Typical explanation within 2 seconds after analysis completes | Keeps feedback close to the move |
+| Offline operation | 100% of coach features available without network access | Preserves the local-first design |
+| User clarity | Let the player mark an explanation helpful or unclear, stored locally | Gives a private way to tune the coach |
+
+### Graphs that could explain a game
+
+- **Evaluation over time:** show advantage swings and mark the moves that caused them.
+- **Move-quality timeline:** plot centipawn loss or review labels by move, with filters for each color.
+- **Candidate comparison:** compare the played move with the top engine alternatives and their resulting evaluations.
+- **Material balance:** show captured and remaining material over the game.
+- **Accuracy summary:** summarize move quality by phase and side, with the scoring method shown.
+
+The coach should distinguish verified engine facts from interpretation. “This move leaves the queen attacked” can be checked from the position; “you played this because…” is only a guess and should be phrased as a possibility.
+
+## Run it locally
+
+### Browser development
 
 Requirements: Node.js 20 or newer.
 
@@ -11,60 +79,38 @@ npm install
 npm run dev
 ```
 
-Open the local address printed by Vite. Stockfish and Maia's model checkpoint are included in the project. For the development version, Maia also needs its Python engine dependencies installed on the development computer.
+Open the local address printed by Vite. Stockfish and Maia’s checkpoint are in the project. The development version also needs Maia’s Python dependencies installed on the development computer.
 
-## Build the offline Windows app
+### Build the offline Windows installer
 
-The Windows desktop build uses a local window and a temporary `127.0.0.1` port for its frontend. The packaged app blocks web requests to other hosts. Its installer includes the board assets, Stockfish, the Maia checkpoint, and Maia's Python runtime and libraries, so the receiving laptop does not need Node.js, Python, or an internet connection.
-
-To create the installer, use a Windows build computer with Node.js 20+, Git, Python 3.12, and internet access for the one-time build downloads:
+Use Windows, Node.js 20+, Git, and Python 3.12. The build computer needs internet once to fetch build dependencies; the resulting installer is self-contained.
 
 ```powershell
 npm install
 npm run package:windows
 ```
 
-The installer is written to `release/Chess-Helper-Setup-1.0.0.exe`. The Maia CPU runtime is large; expect a multi-hundred-megabyte installer. The finished app itself runs offline. `npm run desktop` runs the desktop shell for development, while `npm run dev` continues to run the browser app.
+Output: `release/Chess-Helper-Setup-1.0.0.exe`. This is an unsigned x64 installer; Windows may show a publisher or SmartScreen warning. `npm run desktop` runs the desktop shell for development; `npm run dev` runs the browser version.
 
-## Local board theme
+## Project map
 
-The app includes the Green board (`assets/9rdwe.png`) and Neo piece sprites (`assets/ejgfv/*.png`). The production build copies these images to `dist/assets/`; if an image is missing, the app falls back to built-in colors and Unicode pieces.
+| Path | Purpose |
+| --- | --- |
+| `index.html`, `src/main.js`, `src/style.css` | Interface, chess flow, and styling |
+| `desktop/` | Electron shell, local server, and Maia UCI bridge |
+| `public/engine/` | Local Stockfish JavaScript/WebAssembly files and license |
+| `models/` | Maia-3 5M checkpoint and notices |
+| `vendor/maia3/` | Maia-3 inference source |
+| `scripts/package-maia.ps1` | Builds the packaged Maia CPU runtime |
+| `assets/` | Green board (`9rdwe.png`) and Neo piece artwork (`ejgfv/`) |
 
-## First build scope
+## Engines and limits
 
-- Stockfish 19 Lite, single-threaded WebAssembly engine
-- White or Black player side; one-click orientation flip
-- Strength and search-depth selectors; analysis with evaluation and three candidate lines
-- Timed games, position review with inaccuracy/mistake/blunder labels, and move replay
-- PGN import/export and custom FEN positions
-- Searchable, favoritable browser-local match history and active game recovery
-- Undo your move and undo the bot move to choose a manual replacement
-- Resizable board
-- All match records saved in browser local storage
+- **Stockfish 19 Lite:** single-threaded WebAssembly; adjustable skill, depth, analysis, and candidate lines.
+- **Maia-3 5M:** human-like move selection at a chosen rating; bundled in the Windows release.
+- **Noctie:** not included as an offline engine.
+- **Coach:** natural-language explanations and opening names are not in version 1.0.0; see the plan above.
 
-Match records stay in the current browser profile and are not synced across devices. Opening names and natural-language tactical explanations are not included yet.
+## Licenses
 
-## Local engines
-
-The Stockfish JavaScript/WebAssembly engine files, Maia-3 inference source, and Maia-3 5M checkpoint are stored in this project. Gameplay does not fetch model files or call a remote inference service.
-
-Stockfish runs directly in the browser. Maia-3 uses the bundled source in `vendor/maia3` and the `models/maia3-5m.pt` checkpoint. The Windows packaging step compiles Maia and its Python dependencies into an app-local runtime. The app passes Maia the checkpoint path and complete game history, so it does not fetch weights from Hugging Face.
-
-The browser development setup uses Node.js and a local Maia Python install. Only the Windows release bundles Maia's Python runtime and dependencies. Noctie has no public local model/engine package available to integrate.
-
-## Engine licensing
-
-Stockfish and Stockfish.js are distributed under GPL-3.0; see `public/engine/Copying.txt` and [the upstream project](https://github.com/nmrugg/stockfish.js). Maia-3 code is distributed under AGPL-3.0; see `models/AGPL-3.0.txt` and [the Maia-3 repository](https://github.com/CSSLab/maia3). The Maia-3 model card describes the weights as covered by the repository's code/weights license; see [the official 5M model card](https://huggingface.co/UofTCSSLab/Maia3-5M).
-
-## Technology
-
-- Vite development server
-- Plain JavaScript, HTML, and CSS
-- `chess.js` for legal move validation and game state
-- Stockfish.js WebAssembly running locally in a Web Worker
-
-
-
-## Third-party Maia source
-
-The source under `vendor/maia3` is copied from the official [CSSLab Maia-3 repository](https://github.com/CSSLab/maia3) and remains under its included AGPL-3.0 license. The model checkpoint and required notices are stored under `models/`.
+Stockfish/Stockfish.js uses GPL-3.0 (`public/engine/Copying.txt`). Maia-3 source uses AGPL-3.0 (`vendor/maia3/LICENSE` and `models/AGPL-3.0.txt`). Maia’s checkpoint and license information are documented in [`models/README.md`](models/README.md) and the [Maia-3 model page](https://huggingface.co/UofTCSSLab/Maia3-5M).
