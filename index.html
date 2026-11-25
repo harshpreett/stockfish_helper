@@ -17,17 +17,23 @@
       <main class="layout">
         <section class="play-area">
           <div class="board-column">
-            <div class="player-line"><span class="avatar engine-avatar">♟</span><div><strong>Local engine</strong><small id="engine-caption">Stockfish · waiting</small></div><span id="clock-bot" class="clock">∞</span><span class="rating-tag">BOT</span></div>
+            <div class="player-line"><span class="avatar engine-avatar">♟</span><div class="player-copy"><strong>Local engine</strong><small id="engine-caption">Stockfish · waiting</small></div><span id="clock-bot" class="clock">∞</span><span class="rating-tag">BOT</span></div>
             <div class="board-wrap">
               <div id="board" class="board" role="grid" aria-label="Chess board"></div>
               <button id="resize-handle" class="resize-handle" aria-label="Resize board" title="Drag to resize">⌟</button>
             </div>
-            <div class="player-line you-line"><span class="avatar you-avatar">♟</span><div><strong>You</strong><small id="you-caption">White · your turn</small></div><span id="clock-you" class="clock">∞</span><span id="turn-chip" class="turn-chip">YOUR TURN</span></div>
+            <div class="player-line you-line"><span class="avatar you-avatar">♟</span><div class="player-copy"><strong>You</strong><small id="you-caption">White · your turn</small></div><span id="clock-you" class="clock">∞</span><span id="turn-chip" class="turn-chip">YOUR TURN</span></div>
             <div class="board-tools"><button id="flip-button" class="subtle-button">⇅ <span>Flip board</span></button><span class="tool-spacer"></span><span class="board-hint" id="board-hint">Choose a piece, then a square</span></div>
           </div>
 
           <aside class="game-panel">
-            <div class="panel-heading"><div><span class="eyebrow">LOCAL MATCH</span><h1>Play chess</h1></div><button id="new-game" class="new-game-button">＋ New game</button></div>
+            <div class="panel-heading"><div><span class="eyebrow">LOCAL CHESS</span><h1 id="panel-title">Play</h1></div><button id="new-game" class="new-game-button" hidden>＋ New game</button></div>
+            <nav class="panel-tabs" aria-label="Game panels">
+              <button class="panel-tab active" data-panel="play" aria-pressed="true">♟ <span>Play</span></button>
+              <button class="panel-tab" data-panel="analysis" aria-pressed="false">⌕ <span>Analyze</span></button>
+              <button class="panel-tab" data-panel="games" aria-pressed="false">▤ <span>Games</span></button>
+            </nav>
+            <section class="panel-view active" data-view="play">
             <div class="engine-card">
               <div class="engine-card-title"><span class="engine-orb">♟</span><div><strong id="engine-name">Stockfish</strong><small>Engine runs privately on your device</small></div><span class="engine-state" id="engine-state">OFF</span></div>
               <div class="engine-fields">
@@ -39,21 +45,28 @@
               <p id="engine-note" class="engine-note">First setup: download the local Stockfish engine from the Settings tab.</p>
             </div>
 
-            <section class="analysis-card" aria-label="Position analysis">
-              <div class="section-title"><h2>Position analysis</h2><span id="analysis-score" class="analysis-score">—</span></div>
-              <div class="evaluation-track"><div id="evaluation-fill" class="evaluation-fill"></div></div>
-              <div id="candidate-lines" class="candidate-lines"><p class="analysis-empty">Analyze a position to see candidate moves.</p></div>
-              <div class="analysis-actions"><button id="analyze-position" class="action-button">Analyze position</button><button id="review-game" class="action-button">Review game</button></div>
-              <p id="review-status" class="review-status"></p>
             </section>
-
-            <div class="move-section">
-              <div class="section-title"><h2>Moves</h2><span id="move-count" class="count-pill">0</span></div>
-              <div id="move-list" class="move-list"><div class="empty-moves"><span>♘</span><p>Your moves will appear here.</p></div></div>
-              <div class="move-actions utility-actions"><button id="return-live" class="action-button" hidden>Return to current position</button><button id="export-pgn" class="action-button">Export PGN</button><button id="import-pgn-button" class="action-button">Import PGN</button><input id="import-pgn" type="file" accept=".pgn,text/plain" hidden></div>
-              <div class="move-actions"><button id="undo-you" class="action-button" disabled>↶ Undo my move</button><button id="undo-bot" class="action-button" disabled>↶ Undo bot move</button></div>
-            </div>
-            <div class="match-section"><div class="section-title"><h2>Match history</h2><span id="history-count" class="count-pill">0</span></div><input id="history-search" class="history-search" type="search" placeholder="Search matches"><div id="history-list" class="history-list"><p class="history-empty">Completed and saved matches show up here.</p></div></div>
+            <section class="panel-view" data-view="analysis" hidden>
+              <section class="analysis-card" aria-label="Position analysis">
+                <div class="section-title"><div><span class="eyebrow">CURRENT POSITION</span><h2>Engine analysis</h2></div><span id="analysis-score" class="analysis-score">—</span></div>
+                <div class="evaluation-labels"><span>Black</span><span>White</span></div>
+                <div class="evaluation-track"><div id="evaluation-fill" class="evaluation-fill"></div></div>
+                <div id="candidate-lines" class="candidate-lines"><p class="analysis-empty">Analyze a position to see candidate moves.</p></div>
+                <div class="analysis-actions"><button id="analyze-position" class="primary-button">Analyze position</button><button id="review-game" class="action-button">Review game</button></div>
+                <p id="review-status" class="review-status"></p>
+              </section>
+              <div class="move-section">
+                <div class="section-title"><h2>Game moves</h2><span id="move-count" class="count-pill">0</span></div>
+                <div id="move-list" class="move-list"><div class="empty-moves"><span>♘</span><p>Your moves will appear here.</p></div></div>
+                <div class="move-actions utility-actions"><button id="return-live" class="action-button" hidden>Return to current position</button><button id="export-pgn" class="action-button">Export PGN</button><button id="import-pgn-button" class="action-button">Import PGN</button><input id="import-pgn" type="file" accept=".pgn,text/plain" hidden></div>
+                <div class="move-actions"><button id="undo-you" class="action-button" disabled>↶ Undo my move</button><button id="undo-bot" class="action-button" disabled>↶ Undo bot move</button></div>
+              </div>
+            </section>
+            <section class="panel-view" data-view="games" hidden>
+              <div class="section-title"><div><span class="eyebrow">ON THIS DEVICE</span><h2>Saved matches</h2></div><span id="history-count" class="count-pill">0</span></div>
+              <input id="history-search" class="history-search" type="search" placeholder="Search matches" aria-label="Search matches">
+              <div id="history-list" class="history-list"><p class="history-empty">Completed and saved matches show up here.</p></div>
+            </section>
           </aside>
         </section>
       </main>

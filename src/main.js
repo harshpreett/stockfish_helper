@@ -338,12 +338,28 @@ function drawStatus() {
   els.undoYou.disabled = !state.gameActive || !historyHasUserMove();
   els.undoBot.disabled = !state.gameActive || !historyHasBotMove();
   $('#stop-button').disabled = !state.thinking;
+  $('#start-button').hidden = state.gameActive;
+  $('#new-game').hidden = !state.gameActive;
   els.undoBot.classList.toggle('undo-highlight', state.replacingBotMove);
   drawClocks();
 }
 
 function draw() {
   drawBoard(); drawMoves(); drawStatus(); drawHistory();
+}
+
+function setPanel(name) {
+  document.querySelectorAll('.panel-tab').forEach((tab) => {
+    const active = tab.dataset.panel === name;
+    tab.classList.toggle('active', active);
+    tab.setAttribute('aria-pressed', String(active));
+  });
+  document.querySelectorAll('.panel-view').forEach((view) => {
+    const active = view.dataset.view === name;
+    view.hidden = !active;
+    view.classList.toggle('active', active);
+  });
+  $('#panel-title').textContent = ({ play: 'Play', analysis: 'Analyze', games: 'Saved games' })[name] || 'Play';
 }
 
 function parseEngineInfo(line) {
@@ -625,6 +641,7 @@ function loadMatch(id) {
   state.timeControl = match.timeControl || '0+0'; els.timeControl.value = state.timeControl;
   els.side.value = match.userColor;
   els.strength.value = String(match.strength || 12);
+  setPanel('play');
   draw();
   if (state.gameActive) startClockTurn();
   if (!state.engineReady) loadEngine();
@@ -679,6 +696,7 @@ function bindEvents() {
     newMatch();
   });
   $('#stop-button').addEventListener('click', () => { if (state.thinking) state.worker?.postMessage('stop'); });
+  document.querySelectorAll('.panel-tab').forEach((tab) => tab.addEventListener('click', () => setPanel(tab.dataset.panel)));
   $('#analyze-position').addEventListener('click', analyzePosition);
   $('#review-game').addEventListener('click', () => {
     if ($('#review-game').dataset.stop) { if (state.engineTask) state.engineTask.cancelled = true; state.worker?.postMessage('stop'); return; }
