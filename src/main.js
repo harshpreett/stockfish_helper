@@ -333,10 +333,10 @@ function drawStatus() {
   els.turnChip.textContent = state.replacingBotMove ? 'CHOOSE BOT MOVE' : userTurn ? 'YOUR TURN' : state.thinking ? 'THINKING' : 'BOT TURN';
   els.turnChip.className = `turn-chip${state.replacingBotMove ? ' replace-chip' : userTurn ? '' : ' idle-chip'}`;
   const isMaia = els.model.value === 'maia3';
-  const ready = isMaia || state.engineReady;
-  els.engineState.textContent = state.thinking ? 'THINKING' : ready ? (isMaia ? 'LOCAL' : 'READY') : 'OFF';
-  els.engineState.className = `engine-state${ready ? ' engine-on' : ''}${state.thinking ? ' engine-thinking' : ''}`;
-  els.engineCaption.textContent = isMaia ? `Maia · ${state.thinking ? 'choosing a human-like move' : 'human-like opponent'}` : state.engineReady ? `Stockfish · ${state.thinking ? 'thinking' : 'ready'}` : 'Stockfish · not loaded';
+  const ready = state.engineReady;
+  els.engineState.textContent = state.thinking ? 'THINKING' : isMaia ? 'SETUP' : ready ? 'READY' : 'OFF';
+  els.engineState.className = `engine-state${ready && !isMaia ? ' engine-on' : ''}${state.thinking ? ' engine-thinking' : ''}`;
+  els.engineCaption.textContent = isMaia ? `Maia · ${state.thinking ? 'choosing a human-like move' : 'local setup required'}` : state.engineReady ? `Stockfish · ${state.thinking ? 'thinking' : 'ready'}` : 'Stockfish · not loaded';
   els.undoYou.disabled = !state.gameActive || !historyHasUserMove();
   els.undoBot.disabled = !state.gameActive || !historyHasBotMove();
   $('#stop-button').disabled = !state.thinking;
