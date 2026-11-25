@@ -24,7 +24,7 @@ npm install
 npm run package:windows
 ```
 
-The installer is written to `release/Chess-Helper-Setup-0.1.0.exe`. The Maia CPU runtime is large; expect a multi-hundred-megabyte installer. The finished app itself runs offline. `npm run desktop` runs the desktop shell for development, while `npm run dev` continues to run the browser app.
+The installer is written to `release/Chess-Helper-Setup-1.0.0.exe`. The Maia CPU runtime is large; expect a multi-hundred-megabyte installer. The finished app itself runs offline. `npm run desktop` runs the desktop shell for development, while `npm run dev` continues to run the browser app.
 
 ## Local board theme
 

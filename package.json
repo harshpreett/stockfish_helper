@@ -1,6 +1,6 @@
 {
   "name": "stockfish-helper",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "productName": "Chess Helper",
   "type": "module",
@@ -23,17 +23,40 @@
     "appId": "local.chess.helper",
     "productName": "Chess Helper",
     "asar": true,
-    "directories": { "output": "release" },
-    "files": ["dist/**/*", "desktop/**/*", "package.json"],
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "desktop/**/*",
+      "package.json"
+    ],
     "extraResources": [
-      { "from": "models/maia3-5m.pt", "to": "models/maia3-5m.pt" },
-      { "from": "models/AGPL-3.0.txt", "to": "licenses/Maia-AGPL-3.0.txt" },
-      { "from": "vendor/maia3/LICENSE", "to": "licenses/Maia-upstream-LICENSE.txt" },
-      { "from": "public/engine/Copying.txt", "to": "licenses/Stockfish-GPL-3.0.txt" },
-      { "from": "release-runtime/maia/maia3-uci", "to": "maia" }
+      {
+        "from": "models/maia3-5m.pt",
+        "to": "models/maia3-5m.pt"
+      },
+      {
+        "from": "models/AGPL-3.0.txt",
+        "to": "licenses/Maia-AGPL-3.0.txt"
+      },
+      {
+        "from": "vendor/maia3/LICENSE",
+        "to": "licenses/Maia-upstream-LICENSE.txt"
+      },
+      {
+        "from": "public/engine/Copying.txt",
+        "to": "licenses/Stockfish-GPL-3.0.txt"
+      },
+      {
+        "from": "release-runtime/maia/maia3-uci",
+        "to": "maia"
+      }
     ],
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "artifactName": "Chess-Helper-Setup-${version}.${ext}"
     },
     "nsis": {
@@ -44,4 +67,3 @@
     }
   }
 }
-
