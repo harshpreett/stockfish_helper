@@ -1,6 +1,6 @@
 # Stockfish Helper
 
-A local browser chess app for playing against Stockfish, editing continuations, and reviewing positions. Games, settings, and history stay in your browser.
+A local browser chess app for playing against Stockfish or Maia-3. Stockfish plays for strength; Maia models human move choices at a selected rating. The app also supports editable continuations, game review, custom positions, and saved matches. Games, settings, and history stay in your browser.
 
 ## Start it
 
@@ -43,3 +43,16 @@ Stockfish and Stockfish.js are distributed under GPL-3.0. The engine files are d
 - `chess.js` for legal move validation and game state
 - Stockfish.js WebAssembly running locally in a Web Worker
 
+
+
+## Maia-3 optional local setup
+
+Install Maia-3 with Python before starting the app:
+
+```sh
+git clone https://github.com/CSSLab/maia3.git
+cd maia3
+python -m pip install .
+```
+
+Start this app from the same terminal environment where `maia3-uci` is available. Maia-3 downloads its 5M model weights on first use and caches them locally. The app does not bundle Maia. Maia-3 is distributed under AGPL-3.0; review its [license](https://github.com/CSSLab/maia3/blob/main/LICENSE) before redistributing a combined product. Noctie is not integrated because its official offering does not provide a public local model or engine interface.

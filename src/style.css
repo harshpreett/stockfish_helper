@@ -105,3 +105,22 @@ body{background:radial-gradient(ellipse at 18% 12%,#393834 0,transparent 40%),#2
 
 /* Analysis, clocks, imported positions, and saved match controls */
 .clock{margin-left:auto;min-width:52px;text-align:center;padding:6px 9px;border-radius:6px;background:#1a251f;color:#e8eee7;font:600 13px 'DM Mono',monospace}.clock-low{background:#552e28;color:#ffd3c7}.evaluation-track{height:10px;background:#eee9db;border-radius:8px;overflow:hidden;margin:10px 0 12px}.evaluation-fill{height:100%;width:50%;background:#29342d;border-right:2px solid var(--green);transition:width .25s}.analysis-card{margin-top:18px;padding:14px;background:#18231d;border:1px solid #2b3b31;border-radius:10px}.analysis-score{font:600 11px 'DM Mono',monospace;color:var(--green)}.candidate-lines{display:grid;gap:4px}.candidate-line{display:flex;gap:9px;align-items:center;padding:6px 7px;background:#111a15;border-radius:6px;font:11px 'DM Mono',monospace}.candidate-line b{color:#9bab9b}.candidate-line span{flex:1}.candidate-line small{color:#a9c594}.analysis-empty,.review-status{font-size:10px;color:#849288;margin:7px 0}.analysis-actions,.fen-actions{display:flex;gap:7px;margin-top:10px}.review-status{min-height:14px}.utility-actions{flex-wrap:wrap}.history-search{width:100%;margin:0 0 9px;background:#111a15;border:1px solid #29382f;border-radius:7px;padding:8px;color:#e9eee9;font:11px 'DM Sans',sans-serif}.history-item{padding:0}.history-load{display:flex;align-items:center;gap:9px;flex:1;min-width:0;padding:9px;background:transparent;border:0;text-align:left}.favorite-match{align-self:stretch;border:0;background:transparent;color:#758579;padding:0 10px;font-size:17px}.favorite-match.is-favorite{color:#edc56a}.review-label{display:block;color:#eea38d;font:9px 'DM Sans',sans-serif}.fen-input{width:100%;margin-top:10px;resize:vertical;background:#111a15;color:#e9eee9;border:1px solid #34463a;border-radius:8px;padding:10px;font:11px 'DM Mono',monospace}.fen-actions>*{flex:1}
+
+
+/* Reference proportions and stronger Chess.com-style last-move highlight. */
+.square.last-move{background-image:linear-gradient(#e6de48b8,#e6de48b8)!important;box-shadow:inset 0 0 0 999px #e6de485c}
+.square.last-move.selected{box-shadow:inset 0 0 0 4px #efd93e,inset 0 0 0 999px #e6de4870}
+@media(min-width:821px){
+  .layout{max-width:1510px}
+  .play-area{grid-template-columns:minmax(0,1fr) 490px;gap:44px}
+  :root{--board-size:min(80vh,calc(100dvh - 210px),820px)}
+  .board-wrap{max-width:min(100%,calc(100dvh - 210px));max-height:min(100vw,calc(100dvh - 210px))}
+  .player-line strong{font-size:16px}.player-line small{font-size:13px}.avatar{width:42px;height:42px}
+  .game-panel{border-radius:9px}
+  .engine-card{padding:18px}.engine-fields{gap:9px;flex-wrap:nowrap}.engine-fields label{min-width:0;flex:1;font-size:13px}
+  .engine-fields select{font-size:14px;padding:11px 8px}
+  .engine-card-title strong{font-size:15px}.engine-card-title small{font-size:13px}
+  .engine-note{font-size:13px;min-height:34px}
+  .move-row{padding:9px 7px;font-size:15px}
+}
+.install-steps{overflow:auto;padding:10px 12px;border-radius:7px;background:#242321;color:#e6de48;font:12px/1.7 'DM Mono',monospace}

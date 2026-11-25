@@ -35,14 +35,15 @@
             </nav>
             <section class="panel-view active" data-view="play">
             <div class="engine-card">
-              <div class="engine-card-title"><span class="engine-orb">♟</span><div><strong id="engine-name">Stockfish</strong><small>Engine runs privately on your device</small></div><span class="engine-state" id="engine-state">OFF</span></div>
+              <div class="engine-card-title"><span class="engine-orb">♟</span><div><strong id="engine-name">Stockfish</strong><small id="engine-subtitle">Choose a model and opponent strength</small></div><span class="engine-state" id="engine-state">OFF</span></div>
               <div class="engine-fields">
+                <label>Model<select id="model-select"><option value="stockfish">Stockfish · strongest</option><option value="maia3">Maia · human-like</option></select></label>
                 <label>Play as<select id="side-select"><option value="w">White</option><option value="b">Black</option></select></label>
-                <label>Strength<select id="strength-select"><option value="4">Beginner</option><option value="8">Casual</option><option value="12" selected>Club</option><option value="16">Strong</option><option value="20">Maximum</option></select></label>
+                <label>Difficulty<select id="strength-select"><option value="4">Beginner</option><option value="8">Casual</option><option value="12" selected>Club</option><option value="16">Strong</option><option value="20">Maximum</option></select></label>
                 <label>Time<select id="time-control"><option value="0+0">Unlimited</option><option value="60+0">1 min</option><option value="180+0">3 min</option><option value="180+2">3 + 2</option><option value="300+0">5 min</option><option value="600+0">10 min</option><option value="900+10">15 + 10</option></select></label>
               </div>
               <div class="engine-actions"><button id="start-button" class="primary-button">Start game</button><button id="stop-button" class="stop-button" disabled>Stop</button></div>
-              <p id="engine-note" class="engine-note">First setup: download the local Stockfish engine from the Settings tab.</p>
+              <p id="engine-note" class="engine-note">Stockfish searches for the strongest move. Maia predicts human-like moves at a selected rating.</p>
             </div>
 
             </section>

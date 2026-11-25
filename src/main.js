@@ -12,7 +12,7 @@ const PIECE_FILES = {
 const $ = (selector) => document.querySelector(selector);
 const els = {
   board: $('#board'), moveList: $('#move-list'), moveCount: $('#move-count'),
-  side: $('#side-select'), strength: $('#strength-select'), engineState: $('#engine-state'),
+  side: $('#side-select'), strength: $('#strength-select'), model: $('#model-select'), engineState: $('#engine-state'),
   engineCaption: $('#engine-caption'), engineNote: $('#engine-note'), youCaption: $('#you-caption'),
   turnChip: $('#turn-chip'), boardHint: $('#board-hint'), undoYou: $('#undo-you'), undoBot: $('#undo-bot'),
   historyList: $('#history-list'), historyCount: $('#history-count'), toast: $('#toast'),
@@ -27,12 +27,12 @@ try { stored = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { s
 const savedSettings = stored.settings || {};
 const state = {
   chess: new Chess(), orientation: 'w', userColor: 'w', selected: null,
-  worker: null, engineReady: false, thinking: false, gameActive: false, boardThemeAvailable: false,
+  worker: null, engineReady: false, thinking: false, gameActive: false, maiaAbort: null, boardThemeAvailable: false,
   replacingBotMove: false, pendingStart: false, pendingResume: false, ignoreBestMove: false, dragFrom: null,
   currentMatch: null, matches: Array.isArray(stored.matches) ? stored.matches : [],
   manualPlyIndexes: new Set(), searchDepth: Number(savedSettings.searchDepth) || 12,
   orientationPref: savedSettings.orientation || 'w', timeControl: savedSettings.timeControl || '0+0',
-  analysisLines: [], analysisScore: null, analysisFen: null, engineTask: null,
+  analysisLines: [], analysisScore: null, analysisFen: null, engineTask: null, pendingAnalysis: false, pendingReview: false, pendingAnalysis: false, pendingReview: false,
   reviewIndex: 0, reviewPositions: [], reviewScores: [], replayPly: null,
   clockTimer: null, clockLastTick: null, clockPaused: false, clockSaveAt: 0,
   settingsTab: 'engine', toastTimer: null,
@@ -44,7 +44,7 @@ function saveApp() {
       matches: state.matches,
       activeMatchId: state.gameActive && state.currentMatch?.result === 'In progress' ? state.currentMatch.id : null,
       settings: {
-        side: els.side.value, strength: Number(els.strength.value), searchDepth: state.searchDepth,
+        side: els.side.value, model: els.model.value, strength: Number(els.strength.value), searchDepth: state.searchDepth,
         timeControl: state.timeControl, orientation: state.orientation,
       },
     }));
@@ -64,7 +64,7 @@ function newMatch(startFen = new Chess().fen()) {
   const timeControl = parseTimeControl(els.timeControl.value);
   state.currentMatch = {
     id: crypto.randomUUID(), startedAt: new Date().toISOString(),
-    userColor: state.userColor, engine: 'Stockfish', strength: Number(els.strength.value),
+    userColor: state.userColor, model: els.model.value, engine: els.model.value === 'maia3' ? 'Maia' : 'Stockfish', strength: Number(els.strength.value),
     searchDepth: state.searchDepth, timeControl: els.timeControl.value, startFen: state.chess.fen(),
     clocks: { w: timeControl.base * 1000, b: timeControl.base * 1000 },
     moves: [], result: 'In progress', favorite: false,
@@ -185,7 +185,7 @@ function returnToLivePosition() {
   if (state.gameActive) {
     resumeClock();
     if (state.chess.turn() !== state.userColor) {
-      if (state.engineReady) requestBotMove();
+      if (state.engineReady || els.model.value === 'maia3') requestBotMove();
       else { state.pendingResume = true; loadEngine(); }
     }
   }
@@ -332,9 +332,11 @@ function drawStatus() {
   els.youCaption.textContent = `${state.userColor === 'w' ? 'White' : 'Black'} · ${userTurn ? 'your turn' : state.thinking ? 'engine thinking…' : 'waiting'}`;
   els.turnChip.textContent = state.replacingBotMove ? 'CHOOSE BOT MOVE' : userTurn ? 'YOUR TURN' : state.thinking ? 'THINKING' : 'BOT TURN';
   els.turnChip.className = `turn-chip${state.replacingBotMove ? ' replace-chip' : userTurn ? '' : ' idle-chip'}`;
-  els.engineState.textContent = state.engineReady ? (state.thinking ? 'THINKING' : 'READY') : 'OFF';
-  els.engineState.className = `engine-state${state.engineReady ? ' engine-on' : ''}${state.thinking ? ' engine-thinking' : ''}`;
-  els.engineCaption.textContent = state.engineReady ? `Stockfish · ${state.thinking ? 'thinking' : 'ready'}` : 'Stockfish · not loaded';
+  const isMaia = els.model.value === 'maia3';
+  const ready = isMaia || state.engineReady;
+  els.engineState.textContent = state.thinking ? 'THINKING' : ready ? (isMaia ? 'LOCAL' : 'READY') : 'OFF';
+  els.engineState.className = `engine-state${ready ? ' engine-on' : ''}${state.thinking ? ' engine-thinking' : ''}`;
+  els.engineCaption.textContent = isMaia ? `Maia · ${state.thinking ? 'choosing a human-like move' : 'human-like opponent'}` : state.engineReady ? `Stockfish · ${state.thinking ? 'thinking' : 'ready'}` : 'Stockfish · not loaded';
   els.undoYou.disabled = !state.gameActive || !historyHasUserMove();
   els.undoBot.disabled = !state.gameActive || !historyHasBotMove();
   $('#stop-button').disabled = !state.thinking;
@@ -393,7 +395,8 @@ function renderAnalysis() {
 }
 
 function analyzePosition() {
-  if (!state.engineReady || state.thinking) { showToast('Wait for the engine to be ready.'); return; }
+  if (!state.engineReady) { state.pendingAnalysis = true; loadEngine(); showToast('Loading Stockfish for analysis…'); return; }
+  if (state.thinking) { showToast('Wait for the engine to be ready.'); return; }
   const resumeClock = state.gameActive && state.replayPly === null;
   if (resumeClock) pauseClock();
   state.analysisLines = []; state.analysisScore = null;
@@ -412,7 +415,9 @@ function buildReviewPositions() {
   return positions;
 }
 function reviewGame() {
-  if (!state.currentMatch || !state.currentMatch.moves.length || !state.engineReady || state.thinking) { showToast('Start or load a game before reviewing it.'); return; }
+  if (!state.currentMatch || !state.currentMatch.moves.length) { showToast('Start or load a game before reviewing it.'); return; }
+  if (!state.engineReady) { state.pendingReview = true; loadEngine(); showToast('Loading Stockfish for game review…'); return; }
+  if (state.thinking) { showToast('Wait for the engine to be ready.'); return; }
   if (state.gameActive) pauseClock();
   state.reviewPositions = buildReviewPositions(); state.reviewScores = []; state.reviewIndex = 0;
   $('#review-game').textContent = 'Stop review'; $('#review-game').dataset.stop = 'true';
@@ -478,7 +483,7 @@ function playMove(from, to) {
     syncCurrentMoves();
     startClockTurn(state.chess.turn());
     draw();
-    if (!state.chess.isGameOver() && state.chess.turn() !== state.userColor) requestBotMove();
+    if (!state.chess.isGameOver() && state.chess.turn() !== state.userColor && (state.engineReady || els.model.value === 'maia3')) requestBotMove();
     else if (state.chess.isGameOver()) showToast(state.currentMatch.result);
     return true;
   } catch {
@@ -506,7 +511,7 @@ function loadEngine() {
     const line = typeof event.data === 'string' ? event.data : '';
     if (line === 'uciok') {
       state.engineReady = true;
-      worker.postMessage('setoption name Skill Level value ' + Number(els.strength.value));
+      worker.postMessage('setoption name Skill Level value ' + Number(els.model.value === 'maia3' ? 20 : els.strength.value));
       worker.postMessage('isready');
       els.engineNote.textContent = 'Stockfish is ready. Choose a side and start a new game.';
       drawStatus();
@@ -519,6 +524,10 @@ function loadEngine() {
       }
     } else if (line === 'readyok') {
       drawStatus();
+      if (state.pendingAnalysis) { state.pendingAnalysis = false; analyzePosition(); }
+      else if (state.pendingReview) { state.pendingReview = false; reviewGame(); }
+      if (state.pendingAnalysis) { state.pendingAnalysis = false; analyzePosition(); }
+      else if (state.pendingReview) { state.pendingReview = false; reviewGame(); }
     } else if (line.startsWith('bestmove')) {
       if (state.ignoreBestMove) {
         state.ignoreBestMove = false;
@@ -568,7 +577,35 @@ function loadEngine() {
 }
 
 function requestBotMove() {
-  if (!state.worker || !state.engineReady || state.thinking || state.chess.isGameOver()) return;
+  if (state.thinking || state.chess.isGameOver()) return;
+  if (els.model.value === 'maia3') {
+    const matchId = state.currentMatch?.id;
+    const rootTurn = state.chess.turn();
+    state.thinking = true;
+    state.replacingBotMove = false;
+    state.maiaAbort = new AbortController();
+    drawStatus();
+    fetch('/api/maia/move', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: state.maiaAbort.signal,
+      body: JSON.stringify({ fen: state.chess.fen(), elo: Number(els.strength.value) }),
+    }).then(async (response) => {
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Could not start Maia.');
+      if (!state.gameActive || state.currentMatch?.id !== matchId || !state.thinking) return;
+      if (!data.move || data.move === '(none)') throw new Error('Maia did not return a move.');
+      if (!settleClockForMove(rootTurn)) return;
+      const move = data.move;
+      state.chess.move({ from: move.slice(0, 2), to: move.slice(2, 4), ...(move[4] ? { promotion: move[4] } : {}) });
+      syncCurrentMoves();
+      startClockTurn(state.chess.turn());
+    }).catch((error) => {
+      if (error.name !== 'AbortError') showToast(error.message || 'Maia could not start. See Settings → Engine.');
+    }).finally(() => {
+      if (state.currentMatch?.id === matchId) { state.thinking = false; state.maiaAbort = null; draw(); }
+    });
+    return;
+  }
+  if (!state.worker || !state.engineReady) return;
   state.thinking = true;
   state.engineTask = { type: 'move', fen: state.chess.fen(), rootTurn: state.chess.turn() };
   state.replacingBotMove = false;
@@ -579,6 +616,8 @@ function requestBotMove() {
 }
 
 function cancelSearch() {
+  state.maiaAbort?.abort();
+  state.maiaAbort = null;
   if (state.worker && state.thinking) {
     state.ignoreBestMove = true;
     state.worker.postMessage('stop');
@@ -636,15 +675,17 @@ function loadMatch(id) {
   state.manualPlyIndexes = new Set(match.moves.map((item, index) => item.label ? index : -1).filter((index) => index >= 0));
   state.gameActive = match.result === 'In progress';
   state.replacingBotMove = false;
-  state.pendingResume = !state.engineReady;
   state.replayPly = null;
   state.timeControl = match.timeControl || '0+0'; els.timeControl.value = state.timeControl;
   els.side.value = match.userColor;
-  els.strength.value = String(match.strength || 12);
+  els.model.value = match.model || 'stockfish';
+  els.model.dispatchEvent(new Event('change'));
+  els.strength.value = String(match.strength || (els.model.value === 'maia3' ? 1600 : 12));
+  state.pendingResume = !state.engineReady && els.model.value === 'stockfish';
   setPanel('play');
   draw();
   if (state.gameActive) startClockTurn();
-  if (!state.engineReady) loadEngine();
+  if (els.model.value === 'stockfish' && !state.engineReady) loadEngine();
   else if (state.chess.turn() !== state.userColor) requestBotMove();
   showToast('Match loaded.');
 }
@@ -660,7 +701,7 @@ function renderSettings(tab = state.settingsTab) {
   state.settingsTab = tab;
   document.querySelectorAll('.settings-tab').forEach((button) => button.classList.toggle('active', button.dataset.tab === tab));
   const content = $('#settings-content');
-  if (tab === 'engine') content.innerHTML = `<div class="setting-block"><span class="setting-icon">♟</span><div class="setting-copy"><strong>Stockfish 19 · Lite</strong><p>Fast local engine for browser play. Engine files are downloaded once and stay on your computer.</p><label class="setting-select-label">Search depth<select id="depth-select"><option value="8">8 · faster replies</option><option value="12">12 · balanced</option><option value="16">16 · deeper search</option><option value="20">20 · longest search</option></select></label><button id="download-engine" class="primary-button small-button">Download Stockfish files</button><p id="download-status" class="download-status"></p></div></div><div class="setting-block"><span class="setting-icon">◉</span><div class="setting-copy"><strong>Other engines</strong><p>This version connects Stockfish. Other local UCI engines can be added later.</p></div><span class="coming-soon">PLANNED</span></div><div class="privacy-note"><span>●</span><p>Moves, settings, and saved matches stay in this browser. No paid service or API key is used.</p></div>`;
+  if (tab === 'engine') content.innerHTML = `<div class="setting-block"><span class="setting-icon">♟</span><div class="setting-copy"><strong>Stockfish 19 · Lite</strong><p>Fast local engine for browser play. Engine files are downloaded once and stay on your computer.</p><label class="setting-select-label">Search depth<select id="depth-select"><option value="8">8 · faster replies</option><option value="12">12 · balanced</option><option value="16">16 · deeper search</option><option value="20">20 · longest search</option></select></label><button id="download-engine" class="primary-button small-button">Download Stockfish files</button><p id="download-status" class="download-status"></p></div></div><div class="setting-block"><span class="setting-icon">♞</span><div class="setting-copy"><strong>Maia-3 · human-like</strong><p>Install its local Python engine once, then restart this app:</p><pre class="install-steps">git clone https://github.com/CSSLab/maia3.git&#10;cd maia3&#10;python -m pip install .</pre><p>The first Maia move downloads and caches its 5M model weights.</p></div><span class="coming-soon">LOCAL</span></div><div class="setting-block"><span class="setting-icon">◉</span><div class="setting-copy"><strong>Noctie</strong><p>No local downloadable model or public engine interface is available in its official offering, so it cannot be added as an offline engine.</p></div><span class="coming-soon">UNAVAILABLE</span></div><div class="privacy-note"><span>●</span><p>Moves, settings, and saved matches stay in this browser. No paid service or API key is used.</p></div>`;
   if (tab === 'position') content.innerHTML = `<div class="setting-block"><span class="setting-icon">⌗</span><div class="setting-copy"><strong>Custom position</strong><p>Paste a FEN position to start a new match, or copy the current board.</p><textarea id="fen-input" class="fen-input" rows="4" spellcheck="false" placeholder="Paste FEN here"></textarea><div class="fen-actions"><button id="load-fen" class="primary-button small-button">Start from FEN</button><button id="copy-fen" class="subtle-button">Copy current FEN</button></div></div></div>`;
   if (tab === 'game') content.innerHTML = `<div class="setting-row"><div><strong>Board theme</strong><p>Green board · Neo pieces, loaded from your local assets folder.</p></div><span class="setting-check">✓</span></div><div class="setting-row"><div><strong>Board orientation</strong><p>Flip the board without changing your side in the game.</p></div><button id="settings-flip" class="subtle-button">⇅ Flip</button></div><div class="setting-row"><div><strong>Move replacement</strong><p>Undo a bot move to choose a different legal move for its side. The previous continuation is discarded.</p></div><span class="setting-check">✓</span></div><div class="setting-row"><div><strong>Match history</strong><p>Saved locally in this browser.</p></div><span class="setting-check">✓</span></div>`;
   if (tab === 'about') content.innerHTML = `<div class="about-card"><span class="about-knight">♞</span><h3>Chess on your terms.</h3><p>A local chess game with configurable engines, flexible sides, and editable continuations.</p><span class="version-label">EARLY BUILD · 0.1.0</span></div><div class="license-note"><strong>Engine license</strong><p>Stockfish is distributed under GPL-3.0. The app downloads the engine from its published package and does not include the engine binary in this repository.</p></div>`;
@@ -683,6 +724,7 @@ function renderSettings(tab = state.settingsTab) {
 
 function bindEvents() {
   $('#start-button').addEventListener('click', () => {
+    if (els.model.value === 'maia3') { newMatch(); return; }
     if (!state.engineReady) {
       state.pendingStart = true;
       loadEngine();
@@ -692,10 +734,31 @@ function bindEvents() {
     newMatch();
   });
   $('#new-game').addEventListener('click', () => {
+    if (els.model.value === 'maia3') { newMatch(); return; }
     if (!state.engineReady) { showToast('Load Stockfish first from Settings.'); return; }
     newMatch();
   });
-  $('#stop-button').addEventListener('click', () => { if (state.thinking) state.worker?.postMessage('stop'); });
+  $('#stop-button').addEventListener('click', () => { cancelSearch(); drawStatus(); });
+  els.model.addEventListener('change', () => {
+    const maia = els.model.value === 'maia3';
+    $('#engine-name').textContent = maia ? 'Maia-3' : 'Stockfish';
+    $('#engine-subtitle').textContent = maia ? 'A human-like opponent, matched to your rating' : 'Strong local chess engine';
+    els.engineNote.textContent = maia ? 'Choose a player rating. Maia needs its local Python package; see Settings → Engine.' : 'Stockfish is ready to play at adjustable strength.';
+    els.strength.innerHTML = maia
+      ? '<option value="400">Beginner · ~400</option><option value="800">Casual · ~800</option><option value="1200">Club · ~1200</option><option value="1600" selected>Advanced · ~1600</option><option value="2000">Expert · ~2000</option><option value="2400">Master · ~2400</option><option value="2800">Grandmaster · ~2800</option>'
+      : '<option value="4">Beginner</option><option value="8">Casual</option><option value="12" selected>Club</option><option value="16">Strong</option><option value="20">Maximum</option>';
+    if (state.currentMatch && state.gameActive) {
+      state.currentMatch.model = els.model.value;
+      state.currentMatch.engine = maia ? 'Maia' : 'Stockfish';
+      state.currentMatch.strength = Number(els.strength.value);
+    }
+    if (state.currentMatch && state.gameActive) {
+      state.currentMatch.model = els.model.value;
+      state.currentMatch.engine = maia ? 'Maia' : 'Stockfish';
+      state.currentMatch.strength = Number(els.strength.value);
+    }
+    saveApp(); drawStatus();
+  });
   document.querySelectorAll('.panel-tab').forEach((tab) => tab.addEventListener('click', () => setPanel(tab.dataset.panel)));
   $('#analyze-position').addEventListener('click', analyzePosition);
   $('#review-game').addEventListener('click', () => {
@@ -715,7 +778,7 @@ function bindEvents() {
   $('#settings-overlay').addEventListener('click', (event) => { if (event.target === $('#settings-overlay')) $('#settings-overlay').hidden = true; });
   document.querySelectorAll('.settings-tab').forEach((button) => button.addEventListener('click', () => renderSettings(button.dataset.tab)));
   els.side.addEventListener('change', () => { if (!state.gameActive) { state.userColor = els.side.value; state.orientation = state.orientationPref === 'auto' ? state.userColor : state.orientationPref; saveApp(); draw(); } });
-  els.strength.addEventListener('change', saveApp);
+  els.strength.addEventListener('change', () => { if (state.currentMatch && state.gameActive) state.currentMatch.strength = Number(els.strength.value); saveApp(); });
   els.timeControl.addEventListener('change', () => { state.timeControl = els.timeControl.value; saveApp(); });
   $('#resize-handle').addEventListener('pointerdown', (event) => {
     event.preventDefault();
@@ -754,6 +817,7 @@ async function importPgn(event) {
 }
 
 bindEvents();
+if (savedSettings.model) { els.model.value = savedSettings.model; els.model.dispatchEvent(new Event('change')); }
 if (savedSettings.side) els.side.value = savedSettings.side;
 if (savedSettings.strength) els.strength.value = String(savedSettings.strength);
 if (savedSettings.timeControl) els.timeControl.value = savedSettings.timeControl;
@@ -765,7 +829,11 @@ if (activeMatch) {
   state.currentMatch = activeMatch; state.chess = positionFromMatch(activeMatch); state.userColor = activeMatch.userColor;
   state.orientation = activeMatch.userColor; state.gameActive = true; state.manualPlyIndexes = new Set(activeMatch.moves.map((move, i) => move.label ? i : -1).filter((i) => i >= 0));
   state.timeControl = activeMatch.timeControl || '0+0'; els.timeControl.value = state.timeControl;
-  startClockTurn(); state.pendingResume = true;
+  els.model.value = activeMatch.model || savedSettings.model || 'stockfish';
+  els.model.dispatchEvent(new Event('change'));
+  els.strength.value = String(activeMatch.strength || (els.model.value === 'maia3' ? 1600 : 12));
+  activeMatch.strength = Number(els.strength.value);
+  startClockTurn(); state.pendingResume = els.model.value === 'stockfish';
 }
 els.boardHint.textContent = 'Drag a piece, or click a piece and target square';
 const boardImage = new Image();
@@ -774,4 +842,7 @@ boardImage.onerror = () => { state.boardThemeAvailable = false; els.board.style.
 boardImage.src = '/assets/9rdwe.png';
 draw();
 if (state.pendingResume) { if (!state.engineReady) loadEngine(); else if (state.chess.turn() !== state.userColor) requestBotMove(); }
+else if (activeMatch && state.chess.turn() !== state.userColor) requestBotMove();
+else if (activeMatch && state.chess.turn() !== state.userColor) requestBotMove();
+else if (activeMatch && state.chess.turn() !== state.userColor) requestBotMove();
 
