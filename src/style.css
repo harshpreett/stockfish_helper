@@ -153,7 +153,7 @@ body{background:radial-gradient(ellipse at 18% 12%,#393834 0,transparent 40%),#2
 .board-wrap{width:min(var(--board-size),calc(100dvh - 250px));height:min(var(--board-size),calc(100dvh - 250px));max-width:calc(100% - 78px);max-height:calc(100dvh - 250px);flex:none}
 .board{position:relative}
 .move-arrows{position:absolute;inset:7px;width:calc(100% - 14px);height:calc(100% - 14px);overflow:visible;pointer-events:none;z-index:4}
-.hint-arrow{stroke-width:18;stroke-linecap:round;opacity:.92;filter:drop-shadow(0 2px 3px #0008)}
+.hint-arrow{stroke-width:10;stroke-linecap:round;opacity:.82;filter:drop-shadow(0 1px 1px #0007)}
 .hint-arrow-1{stroke:#c9f36e}.hint-arrow-2{stroke:#f2c85d}
 .game-toolbar{display:flex;flex-direction:column;gap:7px;flex:none;padding:7px;background:#302f2c;border:1px solid #4b4a44;border-radius:11px;box-shadow:0 8px 25px #0003}
 .toolbar-button{width:52px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border:1px solid transparent;border-radius:8px;background:#3a3935;color:#eee;font-size:24px;line-height:1}
