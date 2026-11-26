@@ -12,12 +12,12 @@ Play against Stockfish or Maia-3, analyse positions, and explore alternate conti
 
 <br>
 
-[**⬇ Download for Windows**](https://github.com/harshpreett/stockfish_helper/releases/tag/v1.0.0) · [Browse the code](https://github.com/harshpreett/stockfish_helper) · [See the coach roadmap ↓](#-next-up-a-natural-language-coach)
+[**⬇ Download for Windows**](https://github.com/harshpreett/stockfish_helper/releases/tag/v1.0.0) · [Browse the code](https://github.com/harshpreett/stockfish_helper) · [See the coach ↓](#-game-coach)
 
 </div>
 
 > [!NOTE]
-> The Windows installer includes Stockfish, Maia-3, the model checkpoint, and Maia’s CPU runtime. The installed app needs no internet, Python, or paid API. The installer is unsigned, so Windows may show a publisher or SmartScreen warning.
+> The Windows installer and portable app include Stockfish, Maia-3, the model checkpoint, and Maia’s CPU runtime. The app needs no internet, Python, or paid API on the computer where you run it. Builds are unsigned, so Windows may show a publisher or SmartScreen warning.
 
 ## ✨ What you can do
 
@@ -51,9 +51,9 @@ flowchart LR
 
 In the Windows build, Electron opens the interface from a temporary local-only server. It accepts requests from the app itself and blocks requests to other hosts. Stockfish runs in a browser worker; Maia uses the included 5M checkpoint and packaged CPU runtime.
 
-## 🧠 Next up: a natural-language coach
+## 🧠 Game coach
 
-The next major release is planned around move explanations grounded in chess rules and Stockfish analysis. The coach should explain the move’s idea, what changed, and what the alternatives would have done. A language model could later make the wording more varied, but engine evidence should remain the source of chess facts.
+The coach explains the latest move and both hint candidates using position facts and engine lines. It avoids claiming to know what a player intended. Move review grades both sides’ moves, estimates accuracy from centipawn loss, and tracks detected themes across saved games. Theme recognition is an initial rules-based pass and can miss subtle tactics; performance ratings are not inferred from unrated games.
 
 ```mermaid
 %%{init: {'theme':'base','themeVariables': {'primaryColor':'#253a2c','primaryTextColor':'#f4f7ee','primaryBorderColor':'#a7cf73','lineColor':'#91a784','secondaryColor':'#283341','tertiaryColor':'#3c3324'}}}%%
@@ -75,7 +75,7 @@ flowchart LR
 
 ### 📊 Coach goals
 
-Targets for the planned coach feature — **not features of version 1.0.0**. Metrics and feedback stay local; no game or usage data is sent anywhere.
+Coach output and summaries stay local; no game or usage data is sent anywhere. Accuracy is an estimate based on average centipawn loss, not a rating-provider accuracy formula.
 
 | KPI | Initial target | Why it matters |
 | --- | --- | --- |
@@ -100,10 +100,9 @@ Coach wording should separate evidence from interpretation. “The queen is atta
 <details>
 <summary><b>🗺️ Suggested delivery order</b></summary>
 
-1. **Reliable analysis facts:** evaluation change, best line, legal threats, and tactical motifs.
-2. **Coach explanations:** concise templates grounded in those facts, for both players’ moves.
-3. **Visual review:** evaluation and move-quality graphs linked to the move list.
-4. **Optional language model:** more natural phrasing, with claims restricted to verified engine evidence.
+1. **Broaden motif checks:** improve precision and coverage for pins, overloads, and discovered attacks.
+2. **Visual review:** add evaluation and move-quality graphs linked to the move list.
+3. **Optional language model:** more natural phrasing, with claims restricted to verified engine evidence.
 
 </details>
 
@@ -131,6 +130,14 @@ npm run package:windows
 
 Installer output: `release/Chess-Helper-Setup-1.0.0.exe`. Use `npm run desktop` to run the Electron shell during development, or `npm run dev` for the browser version.
 
+For a **single-file portable app** that runs without installation:
+
+```powershell
+npm run package:portable
+```
+
+Portable output: `release/Chess-Helper-Portable-1.0.0.exe`. Copy it to a folder or USB drive and run it; first launch extracts bundled files to a temporary folder. The portable build is unsigned.
+
 ## 🧰 Project map
 
 | Location | Contents |
@@ -148,7 +155,8 @@ Installer output: `release/Chess-Helper-Setup-1.0.0.exe`. Use `npm run desktop` 
 - **Stockfish 19 Lite** — single-threaded WebAssembly; skill, depth, analysis, and candidate lines.
 - **Maia-3 5M** — human-like move choice at a selected rating; bundled in the Windows release.
 - **Noctie** — not included as an offline engine.
-- **Coach and opening names** — planned; not part of version 1.0.0.
+- **Coach** — local rule and engine evidence; explanations are deterministic templates, not LLM commentary.
+- **Review limits** — accuracy is an estimate; game rating is not inferred; tactical theme checks are preliminary and may miss or overcount patterns.
 
 ## 📄 Licenses
 

@@ -44,7 +44,7 @@
               <button id="undo-bot" class="toolbar-button" title="Undo bot move" aria-label="Undo bot move" disabled>↶<small>Bot</small></button>
               <button id="flip-button" class="toolbar-button" title="Flip board" aria-label="Flip board">⇅<small>Flip</small></button>
               <button id="hint-button" class="toolbar-button hint-button" title="Show two strong candidate moves" aria-label="Hint: show two candidate moves">✦<small>Hint</small></button>
-              <button id="restart-button" class="toolbar-button" title="Restart this game" aria-label="Restart this game">⟲<small>Restart</small></button>
+              <button id="explain-move" class="toolbar-button explain-button" title="Explain the last bot move" aria-label="Explain the last bot move">💬<small>Explain</small></button>
             </div></div>
             <div class="player-line you-line"><span class="avatar you-avatar">♟</span><div class="player-copy"><strong>You</strong><small id="you-caption">White · your turn</small></div><span id="turn-chip" class="turn-chip">YOUR TURN</span></div>
             <div class="board-tools"><span class="board-hint" id="board-hint">Choose a piece, then a square</span><span id="engine-caption" class="engine-caption">Stockfish · ready</span></div>
@@ -60,17 +60,29 @@
             <section class="panel-view active" data-view="play">
               <div class="section-title"><div><span class="eyebrow">CURRENT MATCH</span><h2 id="match-summary">Your game</h2></div><span id="move-count" class="count-pill">0</span></div>
               <div id="move-list" class="move-list"><div class="empty-moves"><span>♘</span><p>Your moves will appear here.</p></div></div>
-              <div class="move-actions utility-actions"><button id="return-live" class="action-button" hidden>Return to current position</button><button id="export-pgn" class="action-button">Export PGN</button><button id="import-pgn-button" class="action-button">Import PGN</button><input id="import-pgn" type="file" accept=".pgn,text/plain" hidden></div>
+              <div class="move-actions utility-actions"><button id="return-live" class="action-button" hidden>Return to current position</button><button id="restart-button" class="action-button">Restart game</button><button id="export-pgn" class="action-button">Export PGN</button><button id="import-pgn-button" class="action-button">Import PGN</button><input id="import-pgn" type="file" accept=".pgn,text/plain" hidden></div>
             </section>
             <section class="panel-view" data-view="analysis" hidden>
+              <section id="review-summary" class="review-summary summary-expanded" aria-label="Game review summary" hidden>
+                <div class="review-players"><span></span><div class="review-player"><strong id="review-opponent-name">Opponent</strong><span id="review-opponent-avatar" class="review-avatar">♞</span></div><div class="review-player"><strong id="review-user-name">You</strong><span id="review-user-avatar" class="review-avatar user-review-avatar">Y</span></div></div>
+                <div class="review-accuracy"><strong>Estimated accuracy</strong><span id="review-opponent-accuracy">—</span><span id="review-user-accuracy">—</span></div>
+                <div class="review-divider"></div>
+                <div id="review-grade-rows" class="review-grade-rows"></div>
+                <button id="review-summary-toggle" class="review-summary-toggle" aria-expanded="true" aria-label="Show fewer review details">⌃</button>
+                <div class="review-divider"></div>
+                <div class="review-rating"><strong>Game rating</strong><span id="review-opponent-rating">—</span><span id="review-user-rating">—</span></div>
+              </section>
               <section class="analysis-card" aria-label="Position analysis">
                 <div class="section-title"><div><span class="eyebrow">CURRENT POSITION</span><h2>Engine analysis</h2></div><span id="analysis-score" class="analysis-score">—</span></div>
                 <div class="evaluation-labels"><span>Black</span><span>White</span></div>
                 <div class="evaluation-track"><div id="evaluation-fill" class="evaluation-fill"></div></div>
                 <div id="candidate-lines" class="candidate-lines"><p class="analysis-empty">Analyze a position to see candidate moves.</p></div>
+                <div id="hint-explanations" class="hint-explanations" hidden></div>
                 <div class="analysis-actions"><button id="analyze-position" class="primary-button">Analyze position</button><button id="review-game" class="action-button">Review game</button></div>
                 <p id="review-status" class="review-status"></p>
               </section>
+              <section id="coach-panel" class="coach-panel" hidden aria-live="polite"></section>
+              <section class="theme-summary"><div class="section-title"><div><span class="eyebrow">ACROSS YOUR SAVED GAMES</span><h2>Chess patterns</h2></div></div><div id="theme-aggregate" class="theme-aggregate"></div></section>
               <button id="stop-button" class="stop-button" disabled hidden>Stop analysis</button>
             </section>
             <section class="panel-view" data-view="games" hidden>

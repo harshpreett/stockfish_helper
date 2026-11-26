@@ -1,4 +1,5 @@
 import { Chess } from 'chess.js';
+import { detectThemes, explainMove, getThemeNames } from './coach.js';
 import './style.css';
 
 const PIECES = {
@@ -20,6 +21,7 @@ const els = {
   analysisScore: $('#analysis-score'), evaluationFill: $('#evaluation-fill'), candidates: $('#candidate-lines'),
   reviewStatus: $('#review-status'), replayReturn: $('#return-live'), historySearch: $('#history-search'),
   arrows: $('#arrow-lines'), matchSummary: $('#match-summary'),
+  coachPanel: $('#coach-panel'), hintExplanations: $('#hint-explanations'),
 };
 
 const storageKey = 'stockfish-helper-v1';
@@ -259,7 +261,7 @@ function drawBoard() {
     const piece = state.chess.get(square);
     const cell = document.createElement('button');
     cell.type = 'button';
-    cell.draggable = Boolean(piece);
+    cell.draggable = false;
     cell.className = `square ${(ri + fi) % 2 ? 'dark' : 'light'}${state.selected === square ? ' selected' : ''}${legalTargets.includes(square) ? ' legal-target' : ''}${last && (last.from === square || last.to === square) ? ' last-move' : ''}`;
     cell.setAttribute('role', 'gridcell');
     cell.setAttribute('aria-label', `${square}${piece ? ` ${piece.color === 'w' ? 'white' : 'black'} ${piece.type}` : ''}`);
@@ -271,7 +273,16 @@ function drawBoard() {
       const image = document.createElement('img');
       image.className = 'piece-image';
       image.alt = '';
+      image.draggable = true;
       image.src = `/assets/ejgfv/${PIECE_FILES[key]}.png`;
+      image.addEventListener('dragstart', (event) => {
+        if (!canMoveForCurrentSide() || piece.color !== state.chess.turn()) { event.preventDefault(); return; }
+        state.dragFrom = square;
+        state.selected = square;
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', square);
+        cell.classList.add('selected');
+      });
       image.onerror = () => {
         const fallback = document.createElement('span');
         fallback.className = `piece ${piece.color === 'w' ? 'white-piece' : 'black-piece'}`;
@@ -281,17 +292,6 @@ function drawBoard() {
       cell.append(image);
     }
     cell.addEventListener('click', () => onSquareClick(square));
-    cell.addEventListener('dragstart', (event) => {
-      if (!canMoveForCurrentSide() || !piece || piece.color !== state.chess.turn()) {
-        event.preventDefault();
-        return;
-      }
-      state.dragFrom = square;
-      state.selected = square;
-      event.dataTransfer.effectAllowed = 'move';
-      event.dataTransfer.setData('text/plain', square);
-      cell.classList.add('selected');
-    });
     cell.addEventListener('dragover', (event) => {
       if (state.dragFrom) {
         event.preventDefault();
@@ -335,10 +335,11 @@ function drawMoves() {
   const movesByPly = [];
   for (let i = 0; i < history.length; i += 2) movesByPly.push([history[i], history[i + 1]]);
   els.moveList.innerHTML = movesByPly.map(([white, black], i) => {
-    const render = (move, ply) => move ? `<button class="move-san${state.replayPly === ply + 1 || (state.replayPly === null && ply === history.length - 1) ? ' current-san' : ''}" data-ply="${ply + 1}" title="Show position after ${escapeHtml(move.san)}">${escapeHtml(move.san)}${state.manualPlyIndexes.has(ply) ? '<small class="move-label">Manual replacement</small>' : ''}</button>` : '<span class="move-placeholder">—</span>';
+    const render = (move, ply) => move ? `<button class="move-san${state.replayPly === ply + 1 || (state.replayPly === null && ply === history.length - 1) ? ' current-san' : ''}" data-ply="${ply + 1}" title="Show position after ${escapeHtml(move.san)}">${escapeHtml(move.san)}${move.reviewLabel ? `<small class="move-grade grade-text-${move.reviewLabel.toLowerCase()}">${escapeHtml(move.reviewLabel)}</small>` : ''}${state.manualPlyIndexes.has(ply) ? '<small class="move-label">Manual replacement</small>' : ''}</button>` : '<span class="move-placeholder">—</span>';
     return `<div class="move-row"><span class="move-number">${i + 1}.</span>${render(white, i * 2)}${render(black, i * 2 + 1)}</div>`;
   }).join('');
   els.moveList.querySelectorAll('[data-ply]').forEach((button) => button.addEventListener('click', () => showReplayPosition(Number(button.dataset.ply))));
+  els.moveList.querySelectorAll('[data-explain-ply]').forEach((button) => button.addEventListener('click', () => explainPly(Number(button.dataset.explainPly))));
   els.moveList.scrollTop = els.moveList.scrollHeight;
 }
 
@@ -403,6 +404,7 @@ function setPanel(name) {
     view.classList.toggle('active', active);
   });
   $('#panel-title').textContent = ({ play: 'Moves', analysis: 'Analyze', games: 'Saved games' })[name] || 'Moves';
+  if (name === 'analysis') { renderReviewSummary(); renderThemeAggregate(); }
 }
 
 function parseEngineInfo(line) {
@@ -433,6 +435,32 @@ function renderAnalysis() {
   const whitePercent = score == null ? 50 : 100 / (1 + Math.exp(-score / 250));
   els.evaluationFill.style.width = `${whitePercent}%`;
   els.candidates.innerHTML = state.analysisLines.filter(Boolean).slice(0, 3).map((line, i) => `<div class="candidate-line"><b>${i + 1}</b><span>${escapeHtml(line.san || '…')}</span><small>${line.score > 0 ? '+' : ''}${(line.score / 100).toFixed(1)}</small></div>`).join('') || '<p class="analysis-empty">Analyze a position to see candidate moves.</p>';
+  if (state.hintActive) renderHintExplanations();
+}
+
+function explainPly(ply) {
+  const match = state.currentMatch;
+  if (!match || ply < 0 || ply >= match.moves.length) return;
+  const beforeFen = positionFenBefore(ply);
+  const afterFen = positionFenBefore(ply + 1);
+  const bestLine = state.chess.fen() === afterFen ? (state.analysisLines.find(Boolean)?.san || '') : '';
+  const playedMove = match.moves[ply];
+  const fact = explainMove({ beforeFen, afterFen, move: playedMove, bestLine });
+  const side = match.moves[ply].color === match.userColor ? 'Your move' : 'Bot move';
+  const reviewEvidence = Number.isFinite(playedMove.reviewLoss) ? ` Stockfish review graded this ${playedMove.reviewLabel.toLowerCase()} with an estimated ${playedMove.reviewLoss} centipawn swing.` : ' Run Review game to add a Stockfish quality comparison for this move.';
+  els.coachPanel.innerHTML = `<strong>${side} · ${escapeHtml(playedMove.san)}</strong><p>${escapeHtml(fact.text + reviewEvidence)}</p>${fact.themes.length ? `<small>Position themes: ${escapeHtml(fact.themes.join(' · '))}</small>` : ''}`;
+  els.coachPanel.hidden = false;
+  setPanel('analysis');
+}
+function renderHintExplanations() {
+  const lines = state.analysisLines.filter(Boolean).slice(0, 2);
+  els.hintExplanations.hidden = !lines.length;
+  els.hintExplanations.innerHTML = lines.map((line, index) => {
+    let after = state.chess;
+    try { after = new Chess(state.chess.fen()); after.move({ from: line.uci.slice(0, 2), to: line.uci.slice(2, 4), ...(line.uci[4] ? { promotion: line.uci[4] } : {}) }); } catch { /* keep base board */ }
+    const fact = explainMove({ beforeFen: state.chess.fen(), afterFen: after.fen(), move: { uci: line.uci, san: line.san.split(' ')[0] }, bestLine: line.san });
+    return `<div class="hint-explanation"><strong>${index + 1}. ${escapeHtml(line.san.split(' ')[0])} · ${line.score > 0 ? '+' : ''}${(line.score / 100).toFixed(1)}</strong><p>${escapeHtml(fact.text)}</p></div>`;
+  }).join('');
 }
 
 function analyzePosition(type = 'analysis') {
@@ -516,14 +544,77 @@ function finishReview() {
     state.currentMatch.moves.forEach((move, i) => {
       const before = state.reviewScores[i], after = state.reviewScores[i + 1];
       if (before == null || after == null) return;
-      const loss = move.color === 'w' ? before - after : after - before;
-      move.reviewLabel = loss > 250 ? 'Blunder' : loss > 100 ? 'Mistake' : loss > 50 ? 'Inaccuracy' : 'Best';
+      const loss = Math.max(0, move.color === 'w' ? before - after : after - before);
+      move.reviewLoss = Math.round(loss);
+      move.reviewLabel = loss > 300 ? 'Blunder' : loss > 150 ? 'Mistake' : loss > 80 ? 'Inaccuracy' : loss > 35 ? 'Good' : loss > 12 ? 'Excellent' : 'Best';
     });
-    state.currentMatch.review = { depth: state.searchDepth, completedAt: new Date().toISOString() }; saveApp();
+    state.currentMatch.review = { depth: state.searchDepth, completedAt: new Date().toISOString() };
+    state.currentMatch.themes = analyzeMatchThemes(state.currentMatch);
+    saveApp();
     els.reviewStatus.textContent = `Review complete · ${state.currentMatch.moves.length} moves classified`;
+    renderReviewSummary();
   } else els.reviewStatus.textContent = 'Review stopped.';
   $('#review-game').textContent = 'Review game'; $('#review-game').dataset.stop = '';
   if (state.gameActive) resumeClock(); draw();
+}
+
+function analyzeMatchThemes(match) {
+  const counts = Object.fromEntries(getThemeNames().map((name) => [name, 0]));
+  for (let ply = 0; ply <= match.moves.length; ply += 1) {
+    for (const theme of detectThemes(positionFenBefore(ply, match))) counts[theme] += 1;
+  }
+  return counts;
+}
+
+const reviewGrades = [
+  ['Brilliant', '‼', 'brilliant'], ['Great', '!', 'great'], ['Book', '◧', 'book'],
+  ['Best', '★', 'best'], ['Excellent', '👍', 'excellent'], ['Good', '✓', 'good'],
+  ['Inaccuracy', '?!', 'inaccuracy'], ['Mistake', '?', 'mistake'], ['Miss', '×', 'miss'], ['Blunder', '⁇', 'blunder'],
+];
+function renderReviewSummary() {
+  const summary = $('#review-summary');
+  const match = state.currentMatch;
+  if (!summary || !match?.review) { if (summary) summary.hidden = true; return; }
+  const userColor = match.userColor || 'w';
+  const engineName = match.engine === 'Maia' || match.model === 'maia3' ? 'Maia' : 'Stockfish';
+  $('#review-opponent-name').textContent = engineName;
+  $('#review-user-name').textContent = 'You';
+  $('#review-opponent-avatar').textContent = engineName === 'Maia' ? '♟' : '♞';
+  $('#review-user-avatar').textContent = 'Y';
+  const countFor = (color, label) => match.moves.filter((move) => move.color === color && move.reviewLabel === label).length;
+  $('#review-grade-rows').innerHTML = reviewGrades.map(([label, icon, key]) => {
+    const opponentCount = countFor(userColor === 'w' ? 'b' : 'w', label);
+    const userCount = countFor(userColor, label);
+    return `<div class="review-grade-row grade-${key}"><strong>${label}</strong><b>${opponentCount}</b><span class="grade-icon" aria-hidden="true">${icon}</span><b>${userCount}</b></div>`;
+  }).join('');
+  const accuracy = (color) => {
+    const losses = match.moves.filter((move) => move.color === color && Number.isFinite(move.reviewLoss)).map((move) => move.reviewLoss);
+    return losses.length ? `${Math.max(0, Math.round(100 * Math.exp(-losses.reduce((sum, loss) => sum + loss, 0) / losses.length / 180)))}%` : '—';
+  };
+  $('#review-opponent-accuracy').textContent = accuracy(userColor === 'w' ? 'b' : 'w');
+  $('#review-user-accuracy').textContent = accuracy(userColor);
+  $('#review-opponent-rating').textContent = '—';
+  $('#review-user-rating').textContent = '—';
+  renderThemeAggregate();
+  summary.hidden = false;
+}
+
+function renderThemeAggregate() {
+  const totals = Object.fromEntries(getThemeNames().map((name) => [name, 0]));
+  for (const match of state.matches) {
+    const counts = match.themes || analyzeMatchThemes(match);
+    match.themes = counts;
+    for (const [theme, count] of Object.entries(counts)) totals[theme] = (totals[theme] || 0) + count;
+  }
+  saveApp();
+  $('#theme-aggregate').innerHTML = Object.entries(totals).map(([name, count]) => `<div class="theme-chip"><span>${escapeHtml(name)}</span><b>${count}</b></div>`).join('');
+}
+
+function positionFenBefore(ply, matchOverride = null) {
+  const match = matchOverride || state.currentMatch;
+  const chess = new Chess(match?.startFen || new Chess().fen());
+  for (const saved of (match?.moves || []).slice(0, ply)) chess.move({ from: saved.uci.slice(0, 2), to: saved.uci.slice(2, 4), ...(saved.uci[4] ? { promotion: saved.uci[4] } : {}) });
+  return chess.fen();
 }
 
 function historyHasUserMove() {
@@ -619,6 +710,7 @@ function loadEngine() {
         state.analysisFen = task.fen;
         state.hintActive = task.type === 'hint';
         renderAnalysis();
+        if (state.hintActive) setPanel('analysis');
         drawMoveArrows();
         if (task.resumeClock && state.gameActive) resumeClock();
         drawStatus();
@@ -809,6 +901,11 @@ function bindEvents() {
   $('#new-game').addEventListener('click', openHome);
   $('#resume-game').addEventListener('click', resumeSavedGame);
   $('#restart-button').addEventListener('click', restartMatch);
+  $('#explain-move').addEventListener('click', () => {
+    const history = state.currentMatch?.moves || [];
+    if (!history.length) { showToast('Play a move first, then ask for an explanation.'); return; }
+    explainPly(history.length - 1);
+  });
   $('#hint-button').addEventListener('click', requestHint);
   $('#stop-button').addEventListener('click', () => { cancelSearch(); drawStatus(); });
   els.model.addEventListener('change', () => {
@@ -831,6 +928,13 @@ function bindEvents() {
   $('#review-game').addEventListener('click', () => {
     if ($('#review-game').dataset.stop) { if (state.engineTask) state.engineTask.cancelled = true; state.worker?.postMessage('stop'); return; }
     reviewGame();
+  });
+  $('#review-summary-toggle').addEventListener('click', (event) => {
+    const expanded = event.currentTarget.getAttribute('aria-expanded') !== 'true';
+    event.currentTarget.setAttribute('aria-expanded', String(expanded));
+    event.currentTarget.closest('.review-summary').classList.toggle('summary-expanded', expanded);
+    event.currentTarget.textContent = expanded ? '⌃' : '⌄';
+    event.currentTarget.setAttribute('aria-label', expanded ? 'Show fewer review details' : 'Show more review details');
   });
   els.replayReturn.addEventListener('click', returnToLivePosition);
   els.historySearch.addEventListener('input', drawHistory);
